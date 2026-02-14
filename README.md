@@ -1,6 +1,8 @@
-# Kalkulátor Tahů (Stage Rigging Calculator)
+# Tahy Jirka - Stage Rigging Calculator
 
-Tento projekt je moderní webová aplikace pro výpočet a vizualizaci divadelních tahů, převedená z původní Visual Basic aplikace do moderního JavaScriptu (React + TypeScript + Vite).
+Moderní webová aplikace pro výpočet a vizualizaci divadelních tahů, převedená z původní Visual Basic aplikace do moderního JavaScriptu (React + TypeScript + Vite).
+
+**Autor:** J.H.Š (Slovácké divadlo)
 
 ## 🚀 Jak aplikaci spustit
 
@@ -39,5 +41,5 @@ Tento projekt obsahuje automatizaci pro GitHub Actions. Pro zprovoznění:
 - `/_legacy`: Původní soubory projektu Visual Basic.
 
 ---
-*Autor původní aplikace: Jiří Janík (2020)*  
+**Autor:** J.H.Š (Slovácké divadlo)  
 *Převedeno do webové verze: Antigravity AI (2026)*
