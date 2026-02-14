@@ -225,7 +225,7 @@ const StageCanvas: React.FC<Props> = ({
             }}
         >
             <img
-                src="/assets/stage-bg.jpg"
+                src="/tahy_verse_2/assets/stage-bg.jpg"
                 alt="Stage Blueprint"
                 className="absolute inset-0 w-full h-full object-contain opacity-95 pointer-events-none"
             />
