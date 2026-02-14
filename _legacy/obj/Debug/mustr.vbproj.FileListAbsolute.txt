@@ -1,0 +1,9 @@
+C:\Users\J\Desktop\visual studio programování\2\bin\mustr.exe
+C:\Users\J\Desktop\visual studio programování\2\bin\mustr.pdb
+C:\Users\J\Desktop\visual studio programování\2\bin\mustr.xml
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.Form1.resources
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.exe
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.xml
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\mustr.pdb

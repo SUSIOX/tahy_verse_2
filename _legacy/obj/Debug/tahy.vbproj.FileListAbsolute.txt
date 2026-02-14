@@ -1,0 +1,167 @@
+C:\Users\J\Desktop\visual studio programování\tahy\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-listbox\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-tisk\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-save\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-save\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-save\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-save\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-save-tisk\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-now\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-now\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-now\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-now\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-newest\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-newest\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-newest\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-newest\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-záloha\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\bin\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\bin\tahy.pdb
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\bin\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.exe
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.xml
+C:\Users\J\Desktop\visual studio programování\tahy-kreslení\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy\bin\tahy.exe
+C:\Users\J\Desktop\tahy\bin\tahy.pdb
+C:\Users\J\Desktop\tahy\bin\tahy.xml
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy - kopie (2)\bin\tahy.exe
+C:\Users\J\Desktop\tahy - kopie (2)\bin\tahy.pdb
+C:\Users\J\Desktop\tahy - kopie (2)\bin\tahy.xml
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy - kopie (2)\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy pruhl kres\bin\tahy.exe
+C:\Users\J\Desktop\tahy pruhl kres\bin\tahy.pdb
+C:\Users\J\Desktop\tahy pruhl kres\bin\tahy.xml
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy pruhl kres\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy pruhl kres - kopie\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy pruh\bin\tahy.exe
+C:\Users\J\Desktop\tahy pruh\bin\tahy.pdb
+C:\Users\J\Desktop\tahy pruh\bin\tahy.xml
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy pruh\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy pruh - kopie\bin\tahy.exe
+C:\Users\J\Desktop\tahy pruh - kopie\bin\tahy.pdb
+C:\Users\J\Desktop\tahy pruh - kopie\bin\tahy.xml
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy pruh - kopie\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy pruh - kopie (2)\bin\tahy.exe
+C:\Users\J\Desktop\tahy pruh - kopie (2)\bin\tahy.pdb
+C:\Users\J\Desktop\tahy pruh - kopie (2)\bin\tahy.xml
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy pruh - kopie (2)\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.Form1.resources
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.Resources.resources
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.exe
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.xml
+C:\Users\J\Desktop\tahy_verse_2\obj\Debug\tahy.pdb
+C:\Users\J\Desktop\tahy_verse_2\bin\tahy.exe
+C:\Users\J\Desktop\tahy_verse_2\bin\tahy.pdb
+C:\Users\J\Desktop\tahy_verse_2\bin\tahy.xml

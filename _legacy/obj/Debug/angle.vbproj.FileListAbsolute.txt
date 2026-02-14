@@ -1,0 +1,9 @@
+C:\Users\J\Desktop\visual studio programování\2\bin\angle.exe
+C:\Users\J\Desktop\visual studio programování\2\bin\angle.pdb
+C:\Users\J\Desktop\visual studio programování\2\bin\angle.xml
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.vbprojAssemblyReference.cache
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.Form1.resources
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.vbproj.GenerateResource.cache
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.exe
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.xml
+C:\Users\J\Desktop\visual studio programování\2\obj\Debug\angle.pdb
