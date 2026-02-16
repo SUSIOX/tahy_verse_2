@@ -431,7 +431,7 @@ const App: React.FC = () => {
                                 <Maximize2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
                             </button>
                         )}
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 ml-[50px]">
                             <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">
                                 {selectedTah ? `Scénický Tah ${selectedTahId}` : (selectedVectorId ? 'Vektorová Linka' : 'Žádný výběr')}
                             </h2>
@@ -850,12 +850,14 @@ const App: React.FC = () => {
                                         {/* Text Content */}
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Text</label>
-                                            <input
-                                                type="text"
+                                            <textarea
                                                 autoFocus
                                                 value={label.text}
                                                 onChange={(e) => updateTextLabel(label.id, { text: e.target.value })}
-                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500/30 outline-none"
+                                                onFocus={(e) => e.target.setSelectionRange(e.target.value.length, e.target.value.length)}
+                                                rows={4}
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500/30 outline-none resize-none text-sm leading-relaxed"
+                                                placeholder="Napište svůj text..."
                                             />
                                         </div>
 
@@ -890,29 +892,48 @@ const App: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Background Color */}
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Pozadí</label>
-                                                <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                            {/* Background Color & Opacity */}
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center pl-1">
+                                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pozadí</label>
                                                     <input
                                                         type="checkbox"
                                                         checked={!!label.backgroundColor}
-                                                        onChange={(e) => updateTextLabel(label.id, { backgroundColor: e.target.checked ? '#ffffff33' : undefined })}
-                                                        className="w-5 h-5 accent-purple-500 rounded border-zinc-700 bg-zinc-800"
+                                                        onChange={(e) => updateTextLabel(label.id, {
+                                                            backgroundColor: e.target.checked ? '#ffffff' : undefined,
+                                                            backgroundOpacity: e.target.checked ? 0.4 : undefined
+                                                        })}
+                                                        className="w-4 h-4 accent-purple-500 rounded border-zinc-700 bg-zinc-800"
                                                     />
-                                                    {label.backgroundColor && (
-                                                        <input
-                                                            type="color"
-                                                            value={label.backgroundColor.length > 7 ? label.backgroundColor.substring(0, 7) : label.backgroundColor}
-                                                            onChange={(e) => {
-                                                                // preserve alpha if it was there or use a default
-                                                                const alpha = label.backgroundColor?.length === 9 ? label.backgroundColor.substring(7) : '66';
-                                                                updateTextLabel(label.id, { backgroundColor: e.target.value + alpha });
-                                                            }}
-                                                            className="w-8 h-8 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
-                                                        />
-                                                    )}
                                                 </div>
+
+                                                {label.backgroundColor && (
+                                                    <div className="space-y-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="color"
+                                                                value={label.backgroundColor.substring(0, 7)}
+                                                                onChange={(e) => updateTextLabel(label.id, { backgroundColor: e.target.value })}
+                                                                className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                            />
+                                                            <div className="flex-1 space-y-1">
+                                                                <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                                                                    <span>Průhlednost</span>
+                                                                    <span>{Math.round((label.backgroundOpacity ?? 0.3) * 100)}%</span>
+                                                                </div>
+                                                                <input
+                                                                    type="range"
+                                                                    min="0"
+                                                                    max="1"
+                                                                    step="0.05"
+                                                                    value={label.backgroundOpacity ?? 0.3}
+                                                                    onChange={(e) => updateTextLabel(label.id, { backgroundOpacity: parseFloat(e.target.value) })}
+                                                                    className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

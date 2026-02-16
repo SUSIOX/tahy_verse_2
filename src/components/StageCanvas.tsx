@@ -109,6 +109,7 @@ const StageCanvas: React.FC<Props> = ({
     const [dragLineInfo, setDragLineInfo] = React.useState<{ id: string, point: 'start' | 'end' } | null>(null);
     const [mousePos, setMousePos] = React.useState<Point>({ x: 0, y: 0 });
     const [draggingTextId, setDraggingTextId] = React.useState<string | null>(null);
+    const [resizingTextId, setResizingTextId] = React.useState<string | null>(null);
     const [textDragOffset, setTextDragOffset] = React.useState<Point>({ x: 0, y: 0 });
 
     // Clear pending line if tool changes or drawing is disabled
@@ -129,6 +130,18 @@ const StageCanvas: React.FC<Props> = ({
         const svgP = pt.matrixTransform(ctm.inverse());
         const currentPos = { x: svgP.x, y: svgP.y };
         setMousePos(currentPos);
+
+        // Text label width resizing
+        if (resizingTextId && showVectorHandles) {
+            onUpdateTextLabels(textLabels.map(label => {
+                if (label.id === resizingTextId) {
+                    const newWidth = Math.max(20, currentPos.x - label.pos.x);
+                    return { ...label, width: newWidth };
+                }
+                return label;
+            }));
+            return;
+        }
 
         // Text label dragging
         if (draggingTextId && showVectorHandles) {
@@ -223,6 +236,7 @@ const StageCanvas: React.FC<Props> = ({
         setResizeMode(null);
         setDragLineInfo(null);
         setDraggingTextId(null);
+        setResizingTextId(null);
         setDragOffset(0);
     };
 
@@ -296,24 +310,32 @@ const StageCanvas: React.FC<Props> = ({
 
     return (
         <div
-            className="relative bg-white shadow-2xl select-none"
+            className="relative bg-white shadow-2xl select-none overflow-hidden"
             style={{
-                width: IMG_WIDTH,
+                width: IMG_WIDTH - 50,
                 height: IMG_HEIGHT,
                 maxWidth: '100%',
                 maxHeight: 'calc(100vh - 200px)',
-                aspectRatio: `${IMG_WIDTH} / ${IMG_HEIGHT}`
+                aspectRatio: `${IMG_WIDTH - 50} / ${IMG_HEIGHT}`
             }}
         >
             <img
                 src={stageBgImage}
                 alt="Stage Blueprint"
-                className="absolute inset-0 w-full h-full object-contain opacity-95 pointer-events-none"
+                className="absolute opacity-95 pointer-events-none z-0"
+                style={{
+                    left: '-4.12%',
+                    top: 0,
+                    width: '104.12%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'left center'
+                }}
             />
 
             <svg
                 className={`absolute inset-0 w-full h-full ${(isDrawingEnabled && drawTool !== 'line' && drawTool !== 'select' && drawTool !== 'text') ? 'pointer-events-none z-0' : 'pointer-events-auto z-20'}`}
-                viewBox={`0 0 ${IMG_WIDTH} ${IMG_HEIGHT}`}
+                viewBox={`50 0 ${IMG_WIDTH - 50} ${IMG_HEIGHT}`}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
@@ -750,88 +772,95 @@ const StageCanvas: React.FC<Props> = ({
                     <g id="text-labels">
                         {textLabels.map(label => {
                             const isSelected = selectedTextId === label.id;
-                            const textWidth = label.text.length * (label.fontSize * 0.6);
-                            const textHeight = label.fontSize;
+                            const wrapWidth = label.width || label.text.length * (label.fontSize * 0.6) + 20;
 
                             return (
                                 <g
                                     key={label.id}
-                                    onDoubleClick={(e) => {
-                                        if (showVectorHandles) {
-                                            e.stopPropagation();
-                                            onTextDoubleClick?.(label.id);
-                                        }
-                                    }}
-                                    onMouseDown={(e) => {
-                                        if (showVectorHandles) {
-                                            e.stopPropagation();
-                                            onSelectText(label.id);
-                                            // Deselect other things
-                                            onSelectVector(null);
-                                            onSelectTah(-1);
-
-                                            // Start dragging
-                                            const svg = (e.currentTarget as SVGElement).ownerSVGElement;
-                                            if (svg) {
-                                                const pt = svg.createSVGPoint();
-                                                pt.x = e.clientX;
-                                                pt.y = e.clientY;
-                                                const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-                                                setDraggingTextId(label.id);
-                                                setTextDragOffset({
-                                                    x: svgP.x - label.pos.x,
-                                                    y: svgP.y - label.pos.y
-                                                });
-                                            }
-                                        }
-                                    }}
-                                    className={showVectorHandles ? "cursor-move" : "pointer-events-none"}
+                                    className={showVectorHandles ? "group cursor-move" : "pointer-events-none"}
                                 >
-                                    {/* Background Rect */}
-                                    {label.backgroundColor && (
-                                        <rect
-                                            x={label.pos.x - 6}
-                                            y={label.pos.y - textHeight + 2}
-                                            width={textWidth + 12}
-                                            height={textHeight + 10}
-                                            fill={label.backgroundColor}
-                                            rx={4}
-                                        />
-                                    )}
-                                    {/* Hit area (if no background, still need something to click) */}
-                                    {!label.backgroundColor && (
-                                        <rect
-                                            x={label.pos.x - 5}
-                                            y={label.pos.y - textHeight}
-                                            width={textWidth + 10}
-                                            height={textHeight + 10}
-                                            fill="transparent"
-                                        />
-                                    )}
-                                    {isSelected && (
-                                        <rect
-                                            x={label.pos.x - 8}
-                                            y={label.pos.y - textHeight - 2}
-                                            width={textWidth + 16}
-                                            height={textHeight + 16}
-                                            fill="none"
-                                            stroke="#3b82f6"
-                                            strokeWidth={1.5}
-                                            strokeDasharray="4,2"
-                                            rx={4}
-                                        />
-                                    )}
-                                    <text
+                                    <foreignObject
                                         x={label.pos.x}
-                                        y={label.pos.y}
-                                        fill={label.color}
-                                        fontSize={label.fontSize}
-                                        fontWeight="bold"
-                                        style={{ filter: isSelected ? 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))' : 'none' }}
-                                        className="select-none"
+                                        y={label.pos.y - label.fontSize}
+                                        width={wrapWidth}
+                                        height={500}
+                                        style={{ overflow: 'visible' }}
+                                        onMouseDown={(e) => {
+                                            if (showVectorHandles) {
+                                                e.stopPropagation();
+                                                onSelectText(label.id);
+                                                onSelectVector(null);
+                                                onSelectTah(-1);
+
+                                                const svg = (e.currentTarget as SVGElement).ownerSVGElement;
+                                                if (svg) {
+                                                    const pt = svg.createSVGPoint();
+                                                    pt.x = e.clientX;
+                                                    pt.y = e.clientY;
+                                                    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+                                                    setDraggingTextId(label.id);
+                                                    setTextDragOffset({
+                                                        x: svgP.x - label.pos.x,
+                                                        y: svgP.y - label.pos.y
+                                                    });
+                                                }
+                                            }
+                                        }}
+                                        onDoubleClick={(e) => {
+                                            if (showVectorHandles) {
+                                                e.stopPropagation();
+                                                onTextDoubleClick?.(label.id);
+                                            }
+                                        }}
                                     >
-                                        {label.text}
-                                    </text>
+                                        <div
+                                            style={{
+                                                color: label.color,
+                                                fontSize: `${label.fontSize}px`,
+                                                fontWeight: 'bold',
+                                                padding: label.backgroundColor ? '4px 8px' : '0',
+                                                display: 'inline-block',
+                                                width: label.width ? '100%' : 'auto',
+                                                wordWrap: 'break-word',
+                                                whiteSpace: 'pre-wrap',
+                                                userSelect: 'none',
+                                                outline: isSelected ? '1.5px dashed #3b82f6' : 'none',
+                                                outlineOffset: '4px',
+                                                position: 'relative',
+                                                borderRadius: '4px'
+                                            }}
+                                        >
+                                            {label.backgroundColor && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        backgroundColor: label.backgroundColor.length === 9 ? label.backgroundColor.substring(0, 7) : label.backgroundColor,
+                                                        opacity: label.backgroundOpacity ?? 0.3,
+                                                        borderRadius: '4px',
+                                                        zIndex: -1
+                                                    }}
+                                                />
+                                            )}
+                                            {label.text}
+                                        </div>
+                                    </foreignObject>
+
+                                    {/* Resize handle */}
+                                    {isSelected && showVectorHandles && (
+                                        <rect
+                                            x={label.pos.x + wrapWidth - 5}
+                                            y={label.pos.y - label.fontSize}
+                                            width={10}
+                                            height={20}
+                                            fill="#3b82f6"
+                                            className="cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                setResizingTextId(label.id);
+                                            }}
+                                        />
+                                    )}
                                 </g>
                             );
                         })}
@@ -857,7 +886,7 @@ const StageCanvas: React.FC<Props> = ({
             </svg>
 
             <DrawingLayer
-                width={IMG_WIDTH}
+                width={IMG_WIDTH - 50}
                 height={IMG_HEIGHT}
                 color={drawingColor}
                 tool={drawTool}

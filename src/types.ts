@@ -41,7 +41,9 @@ export interface TextLabel {
     text: string;
     color: string;
     fontSize: number;
+    width?: number;
     backgroundColor?: string;
+    backgroundOpacity?: number;
 }
 
 export interface Scene {
