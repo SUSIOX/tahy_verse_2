@@ -4,7 +4,7 @@ interface Props {
     width: number;
     height: number;
     color: string;
-    tool: 'pen' | 'eraser' | 'line' | 'select';
+    tool: 'pen' | 'eraser' | 'line' | 'select' | 'text';
     enabled: boolean;
 }
 
@@ -28,7 +28,7 @@ const DrawingLayer: React.FC<Props> = ({ width, height, color, tool, enabled }: 
 
     const startDrawing = (e: React.MouseEvent) => {
         // Only active for raster tools: pen or eraser
-        if (!enabled || tool === 'line' || tool === 'select') return;
+        if (!enabled || tool === 'line' || tool === 'select' || tool === 'text') return;
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -41,7 +41,7 @@ const DrawingLayer: React.FC<Props> = ({ width, height, color, tool, enabled }: 
     };
 
     const draw = (e: React.MouseEvent) => {
-        if (!isDrawing || !enabled || tool === 'line' || tool === 'select') return;
+        if (!isDrawing || !enabled || tool === 'line' || tool === 'select' || tool === 'text') return;
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -72,7 +72,7 @@ const DrawingLayer: React.FC<Props> = ({ width, height, color, tool, enabled }: 
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseOut={stopDrawing}
-            className={`absolute inset-0 z-10 transition-opacity ${enabled && tool !== 'line' && tool !== 'select' ? 'pointer-events-auto cursor-crosshair opacity-100' : 'pointer-events-none opacity-80'}`}
+            className={`absolute inset-0 z-10 transition-opacity ${enabled && tool !== 'line' && tool !== 'select' && tool !== 'text' ? 'pointer-events-auto cursor-crosshair opacity-100' : 'pointer-events-none opacity-80'}`}
         />
     );
 };

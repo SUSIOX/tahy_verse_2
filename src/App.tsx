@@ -7,7 +7,9 @@ import {
     StageConfig,
     VectorLine,
     Point,
-    Scene
+    Scene,
+    LineStyle,
+    TextLabel
 } from './types';
 import StageCanvas from './components/StageCanvas';
 import ControlPanel from './components/ControlPanel';
@@ -26,7 +28,9 @@ import {
     Plus,
     Save,
     Download,
-    Upload
+    Upload,
+    Type,
+    Printer
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -111,11 +115,38 @@ const App: React.FC = () => {
         });
     }, []);
 
-    const [brushColor, setBrushColor] = useState('#3b82f6');
-    const [drawTool, setDrawTool] = useState<'pen' | 'eraser' | 'line' | 'select'>('pen');
+    const [brushColor, setBrushColor] = useState('#000000'); // Default to black
+    const [drawTool, setDrawTool] = useState<'pen' | 'eraser' | 'line' | 'select' | 'text'>('pen');
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [vectorLines, setVectorLines] = useState<VectorLine[]>([]);
     const [selectedVectorId, setSelectedVectorId] = useState<string | null>(null);
+    const [editingLineId, setEditingLineId] = useState<string | null>(null);
+    const [defaultLineStyle, setDefaultLineStyle] = useState<LineStyle>('dashed');
+    const [defaultLineWidth, setDefaultLineWidth] = useState<number>(1);
+
+    const [textLabels, setTextLabels] = useState<TextLabel[]>([]);
+    const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+    const [editingTextId, setEditingTextId] = useState<string | null>(null);
+
+    const updateTextLabel = (id: string, updates: Partial<TextLabel>) => {
+        setTextLabels(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    };
+
+    const removeTextLabel = (id: string) => {
+        setTextLabels(prev => prev.filter(l => l.id !== id));
+        if (selectedTextId === id) setSelectedTextId(null);
+        if (editingTextId === id) setEditingTextId(null);
+    };
+
+    const updateVectorLine = (id: string, updates: Partial<VectorLine>) => {
+        if (id === 'default') {
+            if (updates.lineStyle) setDefaultLineStyle(updates.lineStyle);
+            if (updates.lineWidth) setDefaultLineWidth(updates.lineWidth);
+            if (updates.color) setBrushColor(updates.color);
+            return;
+        }
+        setVectorLines(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    };
 
     const handleColorChange = (newColor: string) => {
         setBrushColor(newColor);
@@ -288,7 +319,7 @@ const App: React.FC = () => {
                                     stageConfig={stageConfig}
                                     onUpdateConfig={setStageConfig}
                                 />
-                                
+
                                 {/* Production and Scene Management Panel */}
                                 <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-2xl p-6 space-y-6">
                                     <div className="space-y-4">
@@ -300,7 +331,7 @@ const App: React.FC = () => {
                                             placeholder="NÁZEV INSCENACE"
                                         />
                                     </div>
-                                    
+
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Scény</h4>
@@ -312,7 +343,7 @@ const App: React.FC = () => {
                                                 <Plus className="w-4 h-4" />
                                             </button>
                                         </div>
-                                        
+
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider w-16">Aktivní:</span>
@@ -326,7 +357,7 @@ const App: React.FC = () => {
                                                     ))}
                                                 </select>
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider w-16">Název:</span>
                                                 <input
@@ -336,7 +367,7 @@ const App: React.FC = () => {
                                                     placeholder="Přejmenovat scénu..."
                                                 />
                                             </div>
-                                            
+
                                             <div className="flex items-center justify-between pt-2 border-t border-zinc-700/30">
                                                 <span className="text-xs text-zinc-500">{scenes.length} scén</span>
                                                 <div className="flex items-center gap-2">
@@ -347,7 +378,7 @@ const App: React.FC = () => {
                                                     >
                                                         <Download className="w-3 h-3" />
                                                     </button>
-                                                    
+
                                                     <label className="p-1.5 bg-zinc-700/30 hover:bg-zinc-700/50 rounded-lg text-zinc-400 hover:text-zinc-300 transition-all cursor-pointer" title="Importovat scény">
                                                         <Upload className="w-3 h-3" />
                                                         <input
@@ -357,7 +388,7 @@ const App: React.FC = () => {
                                                             className="hidden"
                                                         />
                                                     </label>
-                                                    
+
                                                     <button
                                                         onClick={() => {
                                                             if (confirm('Opravdu chcete smazat aktuální scénu?')) {
@@ -378,7 +409,7 @@ const App: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <LogPanel logs={logs} />
                             </div>
                         </div>
@@ -390,28 +421,40 @@ const App: React.FC = () => {
 
 
                 {/* Visual context info */}
-                <div className="absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between">
+                <div className="absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between no-print">
                     <div className="flex items-center gap-8">
                         {!isSidebarOpen && (
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
-                                className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl shadow-2xl hover:bg-zinc-800 transition-all active:scale-95 text-blue-400 pointer-events-auto group"
+                                className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl shadow-2xl hover:bg-zinc-800 transition-all active:scale-95 text-blue-400 group z-40 pointer-events-auto"
                             >
                                 <Maximize2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
                             </button>
                         )}
                         <div className="flex flex-col gap-1">
-                            <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">Scénický Tah {selectedTahId}</h2>
+                            <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">
+                                {selectedTah ? `Scénický Tah ${selectedTahId}` : (selectedVectorId ? 'Vektorová Linka' : 'Žádný výběr')}
+                            </h2>
                             <div className="flex items-center gap-3">
-                                <span className={`w-2 h-2 rounded-full ${selectedTah.isHanging ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-zinc-600'}`} />
+                                <span className={`w-2 h-2 rounded-full ${selectedTah?.isHanging ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-zinc-600'}`} />
                                 <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                                    {selectedTah.isHanging ? `Zatížen: ${selectedTah.dek}cm + ${selectedTah.uva}cm` : 'Bez dekorace'}
+                                    {selectedTah
+                                        ? (selectedTah.isHanging ? `Zatížen: ${selectedTah.dek}cm + ${selectedTah.uva}cm` : 'Bez dekorace')
+                                        : (selectedVectorId ? 'Úprava vektoru' : 'Vyberte tah nebo linku')
+                                    }
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 pointer-events-auto">
+                    <div className="flex items-center gap-4 z-40 pointer-events-auto">
+                        <button
+                            onClick={() => window.print()}
+                            className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 shadow-2xl"
+                            title="Tisk všech scén"
+                        >
+                            <Printer className="w-6 h-6" />
+                        </button>
                         <button
                             onClick={() => setIsSettingsOpen(true)}
                             className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 shadow-2xl"
@@ -424,7 +467,7 @@ const App: React.FC = () => {
                 <div className="flex-1 relative bg-black/40 flex items-center justify-center p-12 mt-[10px]">
                     <div className="w-full h-full relative flex flex-col items-center">
                         {/* Drawing Tools Overlay */}
-                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel rounded-3xl p-2 flex items-center gap-2 z-40 border border-zinc-800 shadow-2xl bg-zinc-900/90 backdrop-blur-md">
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel rounded-3xl p-2 flex items-center gap-2 z-40 border border-zinc-800 shadow-2xl bg-zinc-900/90 backdrop-blur-md no-print">
                             <button
                                 onClick={() => setIsDrawingMode(!isDrawingMode)}
                                 className={`p-4 rounded-2xl transition-all ${isDrawingMode ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-zinc-800 text-zinc-400'}`}
@@ -455,12 +498,20 @@ const App: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => { setDrawTool('line'); setIsDrawingMode(true); }}
+                                onDoubleClick={() => setEditingLineId('default')}
                                 className={`p-3 rounded-xl transition-all ${drawTool === 'line' && isDrawingMode ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
-                                title="Rovná linka"
+                                title="Rovná linka (Dvojklik pro nastavení)"
                             >
                                 <motion.div style={{ rotate: 135 }}>
                                     <Minus className="w-5 h-5" />
                                 </motion.div>
+                            </button>
+                            <button
+                                onClick={() => { setDrawTool('text'); setIsDrawingMode(true); }}
+                                className={`p-3 rounded-xl transition-all ${drawTool === 'text' && isDrawingMode ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
+                                title="Textové pole"
+                            >
+                                <Type className="w-5 h-5" />
                             </button>
                             <button
                                 onClick={() => { setDrawTool('eraser'); setIsDrawingMode(true); }}
@@ -484,12 +535,29 @@ const App: React.FC = () => {
                                 highlightY={focusedPixelValue}
                                 vectorLines={vectorLines}
                                 selectedVectorId={selectedVectorId}
-                                showVectorHandles={drawTool === 'select'}
+                                showVectorHandles={drawTool === 'select' || drawTool === 'text'}
                                 onUpdateVectorLines={setVectorLines}
                                 onSelectVector={(id) => {
                                     setSelectedVectorId(id);
-                                    if (id) setSelectedTahId(-1);
+                                    if (id) {
+                                        setSelectedTahId(-1);
+                                        setSelectedTextId(null);
+                                    }
                                 }}
+                                onLineDoubleClick={(id) => setEditingLineId(id)}
+                                defaultLineStyle={defaultLineStyle}
+                                defaultLineWidth={defaultLineWidth}
+                                textLabels={textLabels}
+                                selectedTextId={selectedTextId}
+                                onUpdateTextLabels={setTextLabels}
+                                onSelectText={(id) => {
+                                    setSelectedTextId(id);
+                                    if (id) {
+                                        setSelectedTahId(-1);
+                                        setSelectedVectorId(null);
+                                    }
+                                }}
+                                onTextDoubleClick={(id) => setEditingTextId(id)}
                             />
                         </div>
                     </div>
@@ -612,7 +680,265 @@ const App: React.FC = () => {
                 </AnimatePresence>
             </main>
 
-            <div className="h-20 glass-panel border-t border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl flex items-center px-12 gap-16 text-sm">
+            {/* Line Settings Modal */}
+            <AnimatePresence>
+                {editingLineId && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setEditingLineId(null)}
+                    >
+                        {(() => {
+                            const isDefault = editingLineId === 'default';
+                            const line = isDefault ? {
+                                id: 'default',
+                                color: brushColor,
+                                lineStyle: defaultLineStyle,
+                                lineWidth: defaultLineWidth
+                            } : vectorLines.find(l => l.id === editingLineId);
+
+                            if (!line) return null;
+                            return (
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                    className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-blue-500/10 rounded-xl">
+                                                <Settings className="w-6 h-6 text-blue-400" />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                                                {isDefault ? 'Výchozí nastavení linky' : 'Nastavení linky'}
+                                            </h3>
+                                        </div>
+                                        <button
+                                            onClick={() => setEditingLineId(null)}
+                                            className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
+                                        >
+                                            <X className="w-6 h-6" />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        {/* Style Selector */}
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Styl čáry</label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {(['solid', 'dashed', 'dotted'] as const).map(style => (
+                                                    <button
+                                                        key={style}
+                                                        onClick={() => updateVectorLine(line.id, { lineStyle: style })}
+                                                        className={`py-3 rounded-xl border-2 font-bold text-xs transition-all ${line.lineStyle === style ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                                    >
+                                                        {style === 'solid' ? 'Plná' : style === 'dashed' ? 'Čárkovaná' : 'Tečkovaná'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Thickness Selector */}
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Tloušťka ({line.lineWidth || 2}px)</label>
+                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
+                                                <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="20"
+                                                    value={line.lineWidth || 2}
+                                                    onChange={(e) => updateVectorLine(line.id, { lineWidth: Number(e.target.value) })}
+                                                    className="flex-1 accent-blue-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Color Selector */}
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva</label>
+                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                                <input
+                                                    type="color"
+                                                    value={line.color}
+                                                    onChange={(e) => updateVectorLine(line.id, { color: e.target.value })}
+                                                    className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                />
+                                                <span className="text-sm font-mono text-zinc-400 uppercase tracking-tighter">{line.color}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Preview */}
+                                        <div className="pt-4 mt-4 border-t border-zinc-800">
+                                            <div className="w-full h-12 bg-black rounded-xl border border-zinc-800 flex items-center justify-center">
+                                                <div
+                                                    style={{
+                                                        width: '80%',
+                                                        height: line.lineWidth || 2,
+                                                        backgroundColor: line.color,
+                                                        borderRadius: line.lineStyle === 'dotted' ? '100px' : '0'
+                                                    }}
+                                                    className={line.lineStyle === 'dashed' ? 'bg-transparent' : ''}
+                                                >
+                                                    {line.lineStyle === 'dashed' && (
+                                                        <div className="w-full h-full" style={{
+                                                            backgroundImage: `linear-gradient(to right, ${line.color} 50%, transparent 50%)`,
+                                                            backgroundSize: `${(line.lineWidth || 2) * 5}px 100%`
+                                                        }} />
+                                                    )}
+                                                    {line.lineStyle === 'dotted' && (
+                                                        <div className="w-full h-full" style={{
+                                                            backgroundImage: `radial-gradient(circle, ${line.color} 30%, transparent 35%)`,
+                                                            backgroundSize: `${(line.lineWidth || 2) * 3}px 100%`
+                                                        }} />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setEditingLineId(null)}
+                                        className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]"
+                                    >
+                                        Hotovo
+                                    </button>
+                                </motion.div>
+                            );
+                        })()}
+                    </motion.div>
+                )}
+
+                {editingTextId && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setEditingTextId(null)}
+                    >
+                        {(() => {
+                            const label = textLabels.find(l => l.id === editingTextId);
+                            if (!label) return null;
+                            return (
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                    className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-purple-500/10 rounded-xl">
+                                                <Type className="w-6 h-6 text-purple-400" />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Nastavení textu</h3>
+                                        </div>
+                                        <button
+                                            onClick={() => setEditingTextId(null)}
+                                            className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
+                                        >
+                                            <X className="w-6 h-6" />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        {/* Text Content */}
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Text</label>
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                value={label.text}
+                                                onChange={(e) => updateTextLabel(label.id, { text: e.target.value })}
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500/30 outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Font Size */}
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Velikost ({label.fontSize}px)</label>
+                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
+                                                <input
+                                                    type="range"
+                                                    min="8"
+                                                    max="72"
+                                                    value={label.fontSize}
+                                                    onChange={(e) => updateTextLabel(label.id, { fontSize: Number(e.target.value) })}
+                                                    className="flex-1 accent-purple-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Color Selection Group */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {/* Text Color */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva textu</label>
+                                                <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                                    <input
+                                                        type="color"
+                                                        value={label.color}
+                                                        onChange={(e) => updateTextLabel(label.id, { color: e.target.value })}
+                                                        className="w-8 h-8 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                    />
+                                                    <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase">{label.color}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Background Color */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Pozadí</label>
+                                                <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!label.backgroundColor}
+                                                        onChange={(e) => updateTextLabel(label.id, { backgroundColor: e.target.checked ? '#ffffff33' : undefined })}
+                                                        className="w-5 h-5 accent-purple-500 rounded border-zinc-700 bg-zinc-800"
+                                                    />
+                                                    {label.backgroundColor && (
+                                                        <input
+                                                            type="color"
+                                                            value={label.backgroundColor.length > 7 ? label.backgroundColor.substring(0, 7) : label.backgroundColor}
+                                                            onChange={(e) => {
+                                                                // preserve alpha if it was there or use a default
+                                                                const alpha = label.backgroundColor?.length === 9 ? label.backgroundColor.substring(7) : '66';
+                                                                updateTextLabel(label.id, { backgroundColor: e.target.value + alpha });
+                                                            }}
+                                                            className="w-8 h-8 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 pt-4">
+                                        <button
+                                            onClick={() => removeTextLabel(label.id)}
+                                            className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
+                                        >
+                                            Smazat
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingTextId(null)}
+                                            className="bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
+                                        >
+                                            Hotovo
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })()}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="h-20 glass-panel border-t border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl flex items-center px-12 gap-16 text-sm no-print">
                 <div className="flex-1" />
                 <div className="flex items-center gap-6">
                     <div className="flex flex-col items-end leading-none">
@@ -620,6 +946,65 @@ const App: React.FC = () => {
                         <span className="text-zinc-200 font-mono font-bold">1 cm = {stageConfig.scale.toFixed(3)} px</span>
                     </div>
                 </div>
+            </div>
+
+            {/* Print Container */}
+            <div className="print-only">
+                {scenes.map((scene) => (
+                    <div key={scene.id} className="print-page">
+                        <div className="p-8 w-full">
+                            <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-6">
+                                <div>
+                                    <h1 className="text-3xl font-black uppercase tracking-tighter">{productionName}</h1>
+                                    <h2 className="text-xl font-bold text-zinc-600">Scéna: {scene.name}</h2>
+                                </div>
+                                <div className="text-right text-sm font-mono text-zinc-400">
+                                    Vytvořeno v aplikaci Tahy & Kulisář
+                                </div>
+                            </div>
+
+                            <div className="flex justify-center bg-white border border-zinc-200">
+                                <StageCanvas
+                                    tahy={scene.tahy}
+                                    stageConfig={stageConfig}
+                                    vectorLines={scene.vectorLines || []}
+                                    textLabels={scene.textLabels || []}
+                                    selectedId={-1}
+                                    selectedVectorId={null}
+                                    selectedTextId={null}
+                                    onSelectTah={() => { }}
+                                    onUpdateTah={() => { }}
+                                    drawingColor="#000000"
+                                    drawTool="select"
+                                    isDrawingEnabled={false}
+                                    onUpdateVectorLines={() => { }}
+                                    onSelectVector={() => { }}
+                                    onUpdateTextLabels={() => { }}
+                                    onSelectText={() => { }}
+                                    showVectorHandles={false}
+                                />
+                            </div>
+
+                            <div className="mt-8 grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h3 className="font-black uppercase tracking-wider text-xs border-b border-zinc-200 pb-2">Poznámky k tahům</h3>
+                                    <div className="text-sm space-y-2">
+                                        {Object.values(scene.tahy)
+                                            .filter(t => t.isHanging || t.dek > 0)
+                                            .sort((a, b) => a.id - b.id)
+                                            .map(t => (
+                                                <div key={t.id} className="flex gap-4">
+                                                    <span className="font-bold w-12">Tah {t.id}:</span>
+                                                    <span>{t.dek}cm dekorace, {t.uva}cm úvazek, {t.pod}cm od země</span>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

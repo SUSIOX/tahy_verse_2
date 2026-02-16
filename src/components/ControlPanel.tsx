@@ -77,6 +77,18 @@ const ControlPanel: React.FC<Props> = ({
     stageConfig,
     onHang,
 }) => {
+    if (!tah) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 bg-zinc-900/30 border border-dashed border-zinc-700 rounded-3xl text-zinc-500 gap-4">
+                <Info className="w-12 h-12 opacity-20" />
+                <div className="text-center space-y-1">
+                    <p className="font-bold text-sm uppercase tracking-wider">Není vybrán tah</p>
+                    <p className="text-[10px]">Klikněte na tah pro jeho úpravu</p>
+                </div>
+            </div>
+        );
+    }
+
     const handleAction = (field: 'dek' | 'uva' | 'pod', dir: 1 | -1) => {
         onUpdate(selectedId, (current) => {
             const currentVal = Number(current[field]) || 0;

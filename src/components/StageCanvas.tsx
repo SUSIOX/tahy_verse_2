@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useMemo } from 'react';
-import { TahState, TAH_IDS, StageConfig, Point, VectorLine } from '../types';
+import { TahState, TAH_IDS, StageConfig, Point, VectorLine, LineStyle, TextLabel } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import DrawingLayer from './DrawingLayer';
+import stageBgImage from '/assets/stage-bg.jpg?url';
 
 interface Props {
     tahy: Record<number, TahState>;
@@ -10,7 +11,7 @@ interface Props {
     onSelectTah: (id: number) => void;
     onUpdateTah: (id: number, updates: Partial<TahState>) => void;
     drawingColor: string;
-    drawTool: 'pen' | 'eraser' | 'line' | 'select';
+    drawTool: 'pen' | 'eraser' | 'line' | 'select' | 'text';
     isDrawingEnabled: boolean;
     stageConfig: StageConfig;
     highlightY?: number | null;
@@ -19,6 +20,14 @@ interface Props {
     showVectorHandles: boolean;
     onUpdateVectorLines: (lines: VectorLine[]) => void;
     onSelectVector: (id: string | null) => void;
+    onLineDoubleClick?: (id: string) => void;
+    defaultLineStyle?: LineStyle;
+    defaultLineWidth?: number;
+    textLabels: TextLabel[];
+    selectedTextId: string | null;
+    onUpdateTextLabels: (labels: TextLabel[]) => void;
+    onSelectText: (id: string | null) => void;
+    onTextDoubleClick?: (id: string) => void;
 }
 
 // Natural image dimensions from the file
@@ -67,9 +76,24 @@ const StageCanvas: React.FC<Props> = ({
     selectedVectorId,
     showVectorHandles,
     onUpdateVectorLines,
-    onSelectVector
+    onSelectVector,
+    onLineDoubleClick,
+    defaultLineStyle = 'dashed',
+    defaultLineWidth = 1,
+    textLabels,
+    selectedTextId,
+    onUpdateTextLabels,
+    onSelectText,
+    onTextDoubleClick
 }: Props) => {
-    const { stageHeightCm, minHeightCm, zeroLevelY, topLimitY, scale: scaleConfig, decorationWidth } = stageConfig;
+    const {
+        stageHeightCm = 900,
+        minHeightCm = 45,
+        zeroLevelY = 482,
+        topLimitY = 43,
+        scale: scaleConfig = 0.4878,
+        decorationWidth = 18
+    } = stageConfig || {};
     const HOIST_TOP_Y = topLimitY;
     const ZERO_Y = zeroLevelY;
     const SCALE_FACTOR = scaleConfig;
@@ -84,15 +108,38 @@ const StageCanvas: React.FC<Props> = ({
     const [pendingLine, setPendingLine] = React.useState<Point | null>(null);
     const [dragLineInfo, setDragLineInfo] = React.useState<{ id: string, point: 'start' | 'end' } | null>(null);
     const [mousePos, setMousePos] = React.useState<Point>({ x: 0, y: 0 });
+    const [draggingTextId, setDraggingTextId] = React.useState<string | null>(null);
+    const [textDragOffset, setTextDragOffset] = React.useState<Point>({ x: 0, y: 0 });
+
+    // Clear pending line if tool changes or drawing is disabled
+    React.useEffect(() => {
+        if (!isDrawingEnabled || drawTool !== 'line') {
+            setPendingLine(null);
+        }
+    }, [isDrawingEnabled, drawTool]);
 
     const handleMouseMove = (e: React.MouseEvent) => {
         const svg = e.currentTarget as SVGSVGElement;
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return;
+
         const pt = svg.createSVGPoint();
         pt.x = e.clientX;
         pt.y = e.clientY;
-        const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+        const svgP = pt.matrixTransform(ctm.inverse());
         const currentPos = { x: svgP.x, y: svgP.y };
         setMousePos(currentPos);
+
+        // Text label dragging
+        if (draggingTextId && showVectorHandles) {
+            onUpdateTextLabels(textLabels.map(label => {
+                if (label.id === draggingTextId) {
+                    return { ...label, pos: { x: currentPos.x - textDragOffset.x, y: currentPos.y - textDragOffset.y } };
+                }
+                return label;
+            }));
+            return;
+        }
 
         // Vector line endpoint dragging
         if (dragLineInfo && showVectorHandles) {
@@ -175,17 +222,49 @@ const StageCanvas: React.FC<Props> = ({
         setDekAdjustId(null);
         setResizeMode(null);
         setDragLineInfo(null);
+        setDraggingTextId(null);
         setDragOffset(0);
+    };
+
+    const handleTextClick = (e: React.MouseEvent) => {
+        if (!isDrawingEnabled || drawTool !== 'text') return;
+
+        const svg = e.currentTarget as SVGSVGElement;
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return;
+
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const svgP = pt.matrixTransform(ctm.inverse());
+
+        const newLabel: TextLabel = {
+            id: `text-${Date.now()}`,
+            pos: { x: svgP.x, y: svgP.y },
+            text: 'Klikněte pro úpravu',
+            color: '#000000',
+            fontSize: 16
+        };
+
+        onUpdateTextLabels([...textLabels, newLabel]);
+        onSelectText(newLabel.id);
+        // Delay opening the edit to avoid immediate closing if handled elsewhere
+        setTimeout(() => {
+            onTextDoubleClick?.(newLabel.id);
+        }, 50);
     };
 
     const handleSvgClick = (e: React.MouseEvent) => {
         if (!isDrawingEnabled || drawTool !== 'line') return;
 
         const svg = e.currentTarget as SVGSVGElement;
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return;
+
         const pt = svg.createSVGPoint();
         pt.x = e.clientX;
         pt.y = e.clientY;
-        const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+        const svgP = pt.matrixTransform(ctm.inverse());
         const currentPos = { x: svgP.x, y: svgP.y };
 
         if (!pendingLine) {
@@ -195,7 +274,9 @@ const StageCanvas: React.FC<Props> = ({
                 id: `vline-${Date.now()}`,
                 start: pendingLine,
                 end: currentPos,
-                color: drawingColor
+                color: drawingColor,
+                lineStyle: defaultLineStyle,
+                lineWidth: defaultLineWidth
             };
             onUpdateVectorLines([...vectorLines, newLine]);
             onSelectVector(newLine.id);
@@ -225,26 +306,37 @@ const StageCanvas: React.FC<Props> = ({
             }}
         >
             <img
-                src="./assets/stage-bg.jpg"
+                src={stageBgImage}
                 alt="Stage Blueprint"
                 className="absolute inset-0 w-full h-full object-contain opacity-95 pointer-events-none"
             />
 
             <svg
-                className={`absolute inset-0 w-full h-full ${(isDrawingEnabled && drawTool !== 'line' && drawTool !== 'select') ? 'pointer-events-none z-0' : 'pointer-events-auto z-20'}`}
+                className={`absolute inset-0 w-full h-full ${(isDrawingEnabled && drawTool !== 'line' && drawTool !== 'select' && drawTool !== 'text') ? 'pointer-events-none z-0' : 'pointer-events-auto z-20'}`}
                 viewBox={`0 0 ${IMG_WIDTH} ${IMG_HEIGHT}`}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
                 onMouseDown={(e) => {
-                    // Only handle background clicks for clearing edit modes
+                    // Click on background (SVG itself) clears selections
                     if (e.target === e.currentTarget) {
                         setSlingAdjustId(null);
                         setDekAdjustId(null);
-                        // Only process line drawing if in line mode
-                        if (isDrawingEnabled && drawTool === 'line') {
-                            handleSvgClick(e);
-                        }
+                        onSelectVector(null);
+                        onSelectText(null);
+                    }
+
+                    // Process text creation
+                    if (isDrawingEnabled && drawTool === 'text' && e.target === e.currentTarget) {
+                        handleTextClick(e);
+                        e.stopPropagation();
+                    }
+
+                    // Process line drawing if in line mode - regardless of click target
+                    if (isDrawingEnabled && drawTool === 'line') {
+                        handleSvgClick(e);
+                        // Prevent other actions (like drag start) when drawing
+                        e.stopPropagation();
                     }
                 }}
             >
@@ -289,6 +381,7 @@ const StageCanvas: React.FC<Props> = ({
 
                             {/* Lano tahu (z pevné kladky dolů) */}
                             <motion.line
+                                x1={x} x2={x} y1={HOIST_TOP_Y} y2={effectiveHookY}
                                 animate={{ x1: x, x2: x, y1: HOIST_TOP_Y, y2: effectiveHookY }}
                                 stroke={isSelected ? "#3b82f6" : "#222"}
                                 strokeWidth={isSelected ? 3 : 2}
@@ -297,6 +390,7 @@ const StageCanvas: React.FC<Props> = ({
 
                             {/* Hák / Tečka tahu - sedí PŘESNĚ na kroužku v obraze */}
                             <motion.circle
+                                cx={x} cy={effectiveHookY}
                                 animate={{ cx: x, cy: effectiveHookY }}
                                 whileHover={{ r: isSelected ? 8 : 7.5 }}
                                 r={isSelected ? 5.5 : 4}
@@ -305,6 +399,7 @@ const StageCanvas: React.FC<Props> = ({
                                 stroke={isSelected ? "#fff" : "none"}
                                 strokeWidth={1}
                                 onMouseDown={(e: React.MouseEvent) => {
+                                    if (isDrawingEnabled) return; // Allow bubbling for lines
                                     e.stopPropagation();
                                     setDraggingId(id);
                                     onSelectTah(id);
@@ -345,8 +440,9 @@ const StageCanvas: React.FC<Props> = ({
                             <AnimatePresence>
                                 {tah.isHanging && uva > 0 && (
                                     <motion.line
+                                        x1={x} x2={x} y1={effectiveHookY} y2={effectiveTopOfDekY}
                                         initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1, x1: x, x2: x, y1: effectiveHookY, y2: effectiveTopOfDekY }}
+                                        animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                         stroke={isSelected ? "#f87171" : "#ef4444"}
                                         strokeWidth={isSelected ? 3 : 2}
@@ -360,24 +456,20 @@ const StageCanvas: React.FC<Props> = ({
                                     <>
                                         <motion.rect
                                             key={`dek-rect-${id}`}
+                                            x={x - DECORATION_HALF_WIDTH}
+                                            y={effectiveTopOfDekY}
+                                            width={decorationWidth}
+                                            height={Math.max(1, dek * SCALE_FACTOR)}
+                                            fill={tah.color ? `${tah.color}66` : "rgba(200, 200, 200, 0.4)"}
+                                            stroke={tah.color || "#666"}
                                             initial={{ opacity: 0, scaleY: 0 }}
-                                            animate={{
-                                                opacity: 1,
-                                                scaleY: 1,
-                                                x: x - DECORATION_HALF_WIDTH,
-                                                y: effectiveTopOfDekY,
-                                                width: decorationWidth,
-                                                height: Math.max(1, dek * scale),
-                                                fill: tah.color ? `${tah.color}66` : undefined, // 66 = ~40% opacity
-                                                stroke: tah.color || undefined
-                                            }}
-                                            whileHover={{
-                                                scaleX: 1.1,
-                                                x: x - (DECORATION_HALF_WIDTH * 1.1),
-                                                width: decorationWidth * 1.1
-                                            }}
+                                            animate={{ opacity: 1, scaleY: 1 }}
                                             exit={{ opacity: 0, scaleY: 0 }}
                                             style={{ originY: 0 }}
+                                            whileHover={{
+                                                scaleX: 1.1,
+                                                fillOpacity: 0.8
+                                            }}
                                             onMouseDown={(e: React.MouseEvent) => {
                                                 if (isDrawingEnabled) return;
                                                 e.stopPropagation();
@@ -424,6 +516,7 @@ const StageCanvas: React.FC<Props> = ({
                                                 >
                                                     {/* Arrow background circle */}
                                                     <motion.circle
+                                                        cx={x} cy={effectiveTopOfDekY - 12}
                                                         animate={{ cx: x, cy: effectiveTopOfDekY - 12 }}
                                                         r={10}
                                                         fill="rgba(59, 130, 246, 0.9)"
@@ -432,6 +525,7 @@ const StageCanvas: React.FC<Props> = ({
                                                     />
                                                     {/* Arrow pointing up */}
                                                     <motion.polygon
+                                                        points={`${x},${effectiveTopOfDekY - 16} ${x - 4},${effectiveTopOfDekY - 10} ${x + 4},${effectiveTopOfDekY - 10}`}
                                                         animate={{
                                                             points: `${x},${effectiveTopOfDekY - 16} ${x - 4},${effectiveTopOfDekY - 10} ${x + 4},${effectiveTopOfDekY - 10}`
                                                         }}
@@ -439,6 +533,10 @@ const StageCanvas: React.FC<Props> = ({
                                                     />
                                                     {/* Arrow stem */}
                                                     <motion.rect
+                                                        x={x - 1.5}
+                                                        y={effectiveTopOfDekY - 10}
+                                                        width={3}
+                                                        height={6}
                                                         animate={{
                                                             x: x - 1.5,
                                                             y: effectiveTopOfDekY - 10,
@@ -461,6 +559,7 @@ const StageCanvas: React.FC<Props> = ({
                                                 >
                                                     {/* Arrow background circle */}
                                                     <motion.circle
+                                                        cx={x} cy={bottomY + 12}
                                                         animate={{ cx: x, cy: bottomY + 12 }}
                                                         r={10}
                                                         fill="rgba(59, 130, 246, 0.9)"
@@ -469,6 +568,7 @@ const StageCanvas: React.FC<Props> = ({
                                                     />
                                                     {/* Arrow pointing down */}
                                                     <motion.polygon
+                                                        points={`${x},${bottomY + 16} ${x - 4},${bottomY + 10} ${x + 4},${bottomY + 10}`}
                                                         animate={{
                                                             points: `${x},${bottomY + 16} ${x - 4},${bottomY + 10} ${x + 4},${bottomY + 10}`
                                                         }}
@@ -476,6 +576,10 @@ const StageCanvas: React.FC<Props> = ({
                                                     />
                                                     {/* Arrow stem */}
                                                     <motion.rect
+                                                        x={x - 1.5}
+                                                        y={bottomY + 4}
+                                                        width={3}
+                                                        height={6}
                                                         animate={{
                                                             x: x - 1.5,
                                                             y: bottomY + 4,
@@ -546,16 +650,48 @@ const StageCanvas: React.FC<Props> = ({
                 <g id="vector-lines">
                     {vectorLines.map(line => {
                         const isSelected = selectedVectorId === line.id;
+                        const strokeWidth = line.lineWidth || 2;
+
+                        let dashArray = "none";
+                        if (line.lineStyle === 'dashed') dashArray = `${strokeWidth * 4},${strokeWidth * 3}`;
+                        if (line.lineStyle === 'dotted') dashArray = `${strokeWidth},${strokeWidth * 2}`;
+
                         return (
-                            <g key={line.id}>
+                            <g
+                                key={line.id}
+                                onDoubleClick={(e) => {
+                                    if (showVectorHandles) {
+                                        e.stopPropagation();
+                                        onLineDoubleClick?.(line.id);
+                                    }
+                                }}
+                            >
+                                {/* Invisible larger hit area for easier clicking */}
+                                <line
+                                    x1={line.start.x}
+                                    y1={line.start.y}
+                                    x2={line.end.x}
+                                    y2={line.end.y}
+                                    stroke="transparent"
+                                    strokeWidth={20}
+                                    className={showVectorHandles ? "cursor-pointer" : "pointer-events-none"}
+                                    onClick={(e) => {
+                                        if (showVectorHandles) {
+                                            e.stopPropagation();
+                                            onSelectVector(line.id);
+                                        }
+                                    }}
+                                />
                                 <line
                                     x1={line.start.x}
                                     y1={line.start.y}
                                     x2={line.end.x}
                                     y2={line.end.y}
                                     stroke={line.color}
-                                    strokeWidth={isSelected ? 4 : 2}
-                                    className={showVectorHandles ? "cursor-pointer" : ""}
+                                    strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
+                                    strokeDasharray={dashArray}
+                                    strokeLinecap={line.lineStyle === 'dotted' ? 'round' : 'butt'}
+                                    className={showVectorHandles ? "cursor-pointer" : "pointer-events-none"}
                                     onClick={(e) => {
                                         if (showVectorHandles) {
                                             e.stopPropagation();
@@ -609,6 +745,97 @@ const StageCanvas: React.FC<Props> = ({
                             </g>
                         );
                     })}
+
+                    {/* Text Labels Layer */}
+                    <g id="text-labels">
+                        {textLabels.map(label => {
+                            const isSelected = selectedTextId === label.id;
+                            const textWidth = label.text.length * (label.fontSize * 0.6);
+                            const textHeight = label.fontSize;
+
+                            return (
+                                <g
+                                    key={label.id}
+                                    onDoubleClick={(e) => {
+                                        if (showVectorHandles) {
+                                            e.stopPropagation();
+                                            onTextDoubleClick?.(label.id);
+                                        }
+                                    }}
+                                    onMouseDown={(e) => {
+                                        if (showVectorHandles) {
+                                            e.stopPropagation();
+                                            onSelectText(label.id);
+                                            // Deselect other things
+                                            onSelectVector(null);
+                                            onSelectTah(-1);
+
+                                            // Start dragging
+                                            const svg = (e.currentTarget as SVGElement).ownerSVGElement;
+                                            if (svg) {
+                                                const pt = svg.createSVGPoint();
+                                                pt.x = e.clientX;
+                                                pt.y = e.clientY;
+                                                const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+                                                setDraggingTextId(label.id);
+                                                setTextDragOffset({
+                                                    x: svgP.x - label.pos.x,
+                                                    y: svgP.y - label.pos.y
+                                                });
+                                            }
+                                        }
+                                    }}
+                                    className={showVectorHandles ? "cursor-move" : "pointer-events-none"}
+                                >
+                                    {/* Background Rect */}
+                                    {label.backgroundColor && (
+                                        <rect
+                                            x={label.pos.x - 6}
+                                            y={label.pos.y - textHeight + 2}
+                                            width={textWidth + 12}
+                                            height={textHeight + 10}
+                                            fill={label.backgroundColor}
+                                            rx={4}
+                                        />
+                                    )}
+                                    {/* Hit area (if no background, still need something to click) */}
+                                    {!label.backgroundColor && (
+                                        <rect
+                                            x={label.pos.x - 5}
+                                            y={label.pos.y - textHeight}
+                                            width={textWidth + 10}
+                                            height={textHeight + 10}
+                                            fill="transparent"
+                                        />
+                                    )}
+                                    {isSelected && (
+                                        <rect
+                                            x={label.pos.x - 8}
+                                            y={label.pos.y - textHeight - 2}
+                                            width={textWidth + 16}
+                                            height={textHeight + 16}
+                                            fill="none"
+                                            stroke="#3b82f6"
+                                            strokeWidth={1.5}
+                                            strokeDasharray="4,2"
+                                            rx={4}
+                                        />
+                                    )}
+                                    <text
+                                        x={label.pos.x}
+                                        y={label.pos.y}
+                                        fill={label.color}
+                                        fontSize={label.fontSize}
+                                        fontWeight="bold"
+                                        style={{ filter: isSelected ? 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))' : 'none' }}
+                                        className="select-none"
+                                    >
+                                        {label.text}
+                                    </text>
+                                </g>
+                            );
+                        })}
+                    </g>
 
                     {/* Drawing Preview */}
                     {pendingLine && (

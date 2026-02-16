@@ -24,17 +24,32 @@ export interface Point {
     y: number;
 }
 
+export type LineStyle = 'solid' | 'dashed' | 'dotted';
+
 export interface VectorLine {
     id: string;
     start: Point;
     end: Point;
     color: string;
+    lineWidth?: number;
+    lineStyle?: LineStyle;
+}
+
+export interface TextLabel {
+    id: string;
+    pos: Point;
+    text: string;
+    color: string;
+    fontSize: number;
+    backgroundColor?: string;
 }
 
 export interface Scene {
     id: string;
     name: string;
     tahy: Record<number, TahState>;
+    vectorLines?: VectorLine[];
+    textLabels?: TextLabel[];
 }
 
 export const TAH_IDS = [1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18];
