@@ -158,8 +158,8 @@ const App: React.FC = () => {
 
     // Force update topLimitY if it's still the old default
     useEffect(() => {
-        if (stageConfig.topLimitY === 32.98 || stageConfig.topLimitY === 43) {
-            updateStageConfig({ topLimitY: 124.9 });
+        if (stageConfig.topLimitY === 32.98 || stageConfig.topLimitY === 43 || stageConfig.topLimitY === 124.9) {
+            updateStageConfig({ topLimitY: 120.9 });
         }
     }, [stageConfig.topLimitY, updateStageConfig]);
 
@@ -364,7 +364,7 @@ const App: React.FC = () => {
 
         // Přidej textové pole pro soupis (50px od kraje, pod názvem)
         const summaryLabel: TextLabel = {
-            id: `summary-${Date.now()}`,
+            id: `summary-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             pos: { x: 50, y: 150 },
             text: summaryText,
             color: '#000000',
@@ -376,7 +376,7 @@ const App: React.FC = () => {
 
         // Přidej textové pole pro název inscenace do levého horního rohu (x: 50, y: 50)
         const productionLabel: TextLabel = {
-            id: `production-${Date.now()}`,
+            id: `production-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             pos: { x: 50, y: 50 },
             text: `<span style="font-weight: 900; font-size: 24px;">${productionName}</span>`,
             color: '#000000',
@@ -831,15 +831,6 @@ const App: React.FC = () => {
                                             className="w-full bg-zinc-950 border-2 border-zinc-800/50 rounded-2xl px-6 py-5 text-zinc-100 font-mono text-xl focus:border-blue-500 outline-none transition-all shadow-inner"
                                         />
                                     </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Šířka kulisy (px)</label>
-                                        <input
-                                            type="number"
-                                            value={stageConfig.decorationWidth}
-                                            onChange={e => updateStageConfig({ decorationWidth: Number(e.target.value) })}
-                                            className="w-full bg-zinc-950 border-2 border-zinc-800/50 rounded-2xl px-6 py-5 text-zinc-100 font-mono text-xl focus:border-blue-500 outline-none transition-all shadow-inner"
-                                        />
-                                    </div>
                                     <div className="col-span-2 p-6 bg-zinc-950/50 border border-zinc-800 rounded-3xl flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <Info className="w-5 h-5 text-blue-500" />
@@ -995,7 +986,10 @@ const App: React.FC = () => {
                                     </div>
 
                                     <button
-                                        onClick={() => setEditingLineId(null)}
+                                        onClick={() => {
+                                            setEditingLineId(null);
+                                            setSelectedVectorId(null);
+                                        }}
                                         className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]"
                                     >
                                         Hotovo
@@ -1140,7 +1134,10 @@ const App: React.FC = () => {
                                             Smazat
                                         </button>
                                         <button
-                                            onClick={() => setEditingTextId(null)}
+                                            onClick={() => {
+                                                setEditingTextId(null);
+                                                setSelectedTextId(null);
+                                            }}
                                             className="bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
                                         >
                                             Hotovo
