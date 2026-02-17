@@ -611,7 +611,16 @@ const App: React.FC = () => {
                         )}
                         <div className="flex flex-col gap-1 ml-[50px]">
                             <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">
-                                {selectedTah ? `Scénický Tah ${selectedTahId}` : (selectedVectorId ? 'Vektorová Linka' : 'Žádný výběr')}
+                                {(() => {
+                                    const toolNames: Record<string, string> = {
+                                        select: 'Výběr',
+                                        pen: 'Štětec',
+                                        line: 'Rovná linka',
+                                        text: 'Textové pole',
+                                        eraser: 'Guma'
+                                    };
+                                    return `Editace popisků - ${toolNames[drawTool] || drawTool}`;
+                                })()}
                             </h2>
                             <div className="flex items-center gap-3">
                                 <span className={`w-2 h-2 rounded-full ${selectedTah?.isHanging ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-zinc-600'}`} />
