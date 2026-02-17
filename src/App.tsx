@@ -324,10 +324,10 @@ const App: React.FC = () => {
             `<span style="font-family: monospace; font-size: 10px; color: #888; font-weight: bold; text-transform: uppercase;">výška rozměr úvazek název</span><br/>` +
             `<span style="font-family: monospace; font-size: 13px;">${usedHoists.join('<br/>')}</span>`;
 
-        // Přidej textové pole pro soupis (cca x: 250, y: 300)
+        // Přidej textové pole pro soupis (50px od kraje, pod názvem)
         const summaryLabel: TextLabel = {
             id: `summary-${Date.now()}`,
-            pos: { x: 250, y: 300 },
+            pos: { x: 50, y: 150 },
             text: summaryText,
             color: '#000000',
             fontSize: 14,
@@ -336,10 +336,10 @@ const App: React.FC = () => {
             backgroundOpacity: 0.9
         };
 
-        // Přidej textové pole pro název inscenace do levého horního rohu (x: 10, y: 10)
+        // Přidej textové pole pro název inscenace do levého horního rohu (x: 50, y: 50)
         const productionLabel: TextLabel = {
             id: `production-${Date.now()}`,
-            pos: { x: 10, y: 10 },
+            pos: { x: 50, y: 50 },
             text: `<span style="font-weight: 900; font-size: 24px;">${productionName}</span>`,
             color: '#000000',
             fontSize: 24,
@@ -348,6 +348,9 @@ const App: React.FC = () => {
         };
 
         setTextLabels(prev => [...prev, summaryLabel, productionLabel]);
+        setSelectedTextId(null); // Ukončit editaci textových polí
+        setSelectedVectorId(null);
+        setSelectedTahId(-1);
         addLog(`Soupis tahů a název inscenace vytvořeny pro scénu: ${activeScene.name}`);
     };
 
