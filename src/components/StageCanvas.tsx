@@ -863,8 +863,8 @@ const StageCanvas: React.FC<Props> = ({
                                         }
                                     }}
                                 />
-                                {/* Drag Handles - Only visible in SELECT mode */}
-                                {showVectorHandles && (
+                                {/* Drag Handles - Only visible in SELECT mode AND when line is selected */}
+                                {showVectorHandles && isSelected && (
                                     <>
                                         <circle
                                             cx={line.start.x}
@@ -944,36 +944,36 @@ const StageCanvas: React.FC<Props> = ({
                                     y={label.pos.y - label.fontSize}
                                     width={wrapWidth}
                                     height={500}
-                                    style={{ overflow: 'visible' }}
-                                    onMouseDown={(e) => {
-                                        if (showVectorHandles) {
-                                            e.stopPropagation();
-                                            onSelectText(label.id);
-                                            onSelectVector(null);
-                                            onSelectTah(-1);
-
-                                            const svg = (e.currentTarget as SVGElement).ownerSVGElement;
-                                            if (svg) {
-                                                const pt = svg.createSVGPoint();
-                                                pt.x = e.clientX;
-                                                pt.y = e.clientY;
-                                                const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-                                                setDraggingTextId(label.id);
-                                                setTextDragOffset({
-                                                    x: svgP.x - label.pos.x,
-                                                    y: svgP.y - label.pos.y
-                                                });
-                                            }
-                                        }
-                                    }}
-                                    onDoubleClick={(e) => {
-                                        if (showVectorHandles) {
-                                            e.stopPropagation();
-                                            onTextDoubleClick?.(label.id);
-                                        }
-                                    }}
+                                    style={{ overflow: 'visible', pointerEvents: 'none' }}
                                 >
                                     <div
+                                        onMouseDown={(e) => {
+                                            if (showVectorHandles) {
+                                                e.stopPropagation();
+                                                onSelectText(label.id);
+                                                onSelectVector(null);
+                                                onSelectTah(-1);
+
+                                                const svg = (e.currentTarget as HTMLDivElement).closest('svg');
+                                                if (svg) {
+                                                    const pt = svg.createSVGPoint();
+                                                    pt.x = e.clientX;
+                                                    pt.y = e.clientY;
+                                                    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+                                                    setDraggingTextId(label.id);
+                                                    setTextDragOffset({
+                                                        x: svgP.x - label.pos.x,
+                                                        y: svgP.y - label.pos.y
+                                                    });
+                                                }
+                                            }
+                                        }}
+                                        onDoubleClick={(e) => {
+                                            if (showVectorHandles) {
+                                                e.stopPropagation();
+                                                onTextDoubleClick?.(label.id);
+                                            }
+                                        }}
                                         style={{
                                             color: label.color,
                                             fontSize: `${label.fontSize}px`,
@@ -987,7 +987,9 @@ const StageCanvas: React.FC<Props> = ({
                                             outline: isSelected ? '1.5px dashed #3b82f6' : 'none',
                                             outlineOffset: '4px',
                                             position: 'relative',
-                                            borderRadius: '4px'
+                                            borderRadius: '4px',
+                                            pointerEvents: 'auto',
+                                            cursor: showVectorHandles ? 'move' : 'default'
                                         }}
                                     >
                                         {label.backgroundColor && (
@@ -998,11 +1000,12 @@ const StageCanvas: React.FC<Props> = ({
                                                     backgroundColor: label.backgroundColor.length === 9 ? label.backgroundColor.substring(0, 7) : label.backgroundColor,
                                                     opacity: label.backgroundOpacity ?? 0.3,
                                                     borderRadius: '4px',
-                                                    zIndex: -1
+                                                    zIndex: -1,
+                                                    pointerEvents: 'none'
                                                 }}
                                             />
                                         )}
-                                        <div dangerouslySetInnerHTML={{ __html: label.text }} />
+                                        <div dangerouslySetInnerHTML={{ __html: label.text }} style={{ pointerEvents: 'none' }} />
                                     </div>
                                 </foreignObject>
 
