@@ -62,7 +62,7 @@ export const DEFAULT_STAGE_CONFIG: StageConfig = {
     topLimitY: 120.9,
     minHeightCm: 45,
     zeroLevelY: 540,
-    scale: 5.93,
+    scale: 0.4656,
     decorationWidth: 18
 };
 

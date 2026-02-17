@@ -90,8 +90,16 @@ const App: React.FC = () => {
     const [stageConfig, setStageConfig] = useState<StageConfig>(() => {
         try {
             const saved = localStorage.getItem('tahy-stage-config');
-            if (saved) return JSON.parse(saved);
-            return (defaultSet.stageConfig as StageConfig) || DEFAULT_STAGE_CONFIG;
+            let config: StageConfig;
+            if (saved) {
+                config = JSON.parse(saved);
+            } else {
+                config = { ...DEFAULT_STAGE_CONFIG, ...(defaultSet.stageConfig as any) };
+            }
+            // VŽDY přepočítat měřítko při startu pro jistotu (Scale = Delta Px / Delta Cm)
+            const distancePx = config.zeroLevelY - config.topLimitY;
+            config.scale = distancePx / config.stageHeightCm;
+            return config;
         } catch (e) {
             console.error('Failed to load stage config', e);
             return DEFAULT_STAGE_CONFIG;
