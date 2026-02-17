@@ -319,18 +319,10 @@ const App: React.FC = () => {
             return;
         }
 
-        // Vytvoř textový soupis s HTML formátováním
-        const summaryText = `
-            <div style="font-family: monospace;">
-                <div style="font-weight: 900; font-size: 18px; margin-bottom: 2px; color: #000;">SOUPIS TAHŮ</div>
-                <div style="font-size: 10px; color: #888; margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">
-                    výška rozměr úvazek název
-                </div>
-                <div style="line-height: 1.5; font-size: 13px;">
-                    ${usedHoists.join('<br/>')}
-                </div>
-            </div>
-        `;
+        // Vytvoř textový soupis s HTML formátováním (bez divů, pouze span a br)
+        const summaryText = `<span style="font-family: monospace; font-weight: 900; font-size: 18px; color: #000;">SOUPIS TAHŮ</span><br/>` +
+            `<span style="font-family: monospace; font-size: 10px; color: #888; font-weight: bold; text-transform: uppercase;">výška rozměr úvazek název</span><br/>` +
+            `<span style="font-family: monospace; font-size: 13px;">${usedHoists.join('<br/>')}</span>`;
 
         // Přidej textové pole do levé části obrazu (cca x: 250, y: 300)
         const newLabel: TextLabel = {
