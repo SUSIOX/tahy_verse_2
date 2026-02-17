@@ -655,7 +655,13 @@ const App: React.FC = () => {
                             </button>
                             <div className="w-[1px] h-8 bg-zinc-800 mx-2" />
                             <button
-                                onClick={() => { setDrawTool('select'); setIsDrawingMode(true); }}
+                                onClick={() => {
+                                    setDrawTool('select');
+                                    setIsDrawingMode(true);
+                                    setSelectedVectorId(null);
+                                    setSelectedTextId(null);
+                                    setSelectedTahId(-1);
+                                }}
                                 className={`p-3 rounded-xl transition-all ${drawTool === 'select' && isDrawingMode ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
                                 title="Výběr / Přesun"
                             >
@@ -985,15 +991,33 @@ const App: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => {
-                                            setEditingLineId(null);
-                                            setSelectedVectorId(null);
-                                        }}
-                                        className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]"
-                                    >
-                                        Hotovo
-                                    </button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {!isDefault && (
+                                            <button
+                                                onClick={() => {
+                                                    setVectorLines(prev => {
+                                                        const next = prev.filter(l => l.id !== line.id);
+                                                        syncCurrentStateToScenes(undefined, next, undefined);
+                                                        return next;
+                                                    });
+                                                    setEditingLineId(null);
+                                                    setSelectedVectorId(null);
+                                                }}
+                                                className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
+                                            >
+                                                Smazat
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setEditingLineId(null);
+                                                setSelectedVectorId(null);
+                                            }}
+                                            className={`${isDefault ? 'col-span-2' : ''} bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]`}
+                                        >
+                                            Hotovo
+                                        </button>
+                                    </div>
                                 </motion.div>
                             );
                         })()}
