@@ -17,6 +17,7 @@ export interface StageConfig {
     zeroLevelY: number;    // Pixelová pozice podlahy (0 cm)
     scale: number;        // Měřítko (px/cm)
     decorationWidth: number; // Šířka kulisy (px)
+    customBgImage?: string; // Volitelný podkladový obrázek (base64 nebo URL)
 }
 
 export interface Point {

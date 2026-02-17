@@ -386,7 +386,7 @@ const StageCanvas: React.FC<Props> = ({
             }} />
 
             <img
-                src={stageBgImage}
+                src={stageConfig.customBgImage || stageBgImage}
                 alt="Stage Blueprint"
                 className="absolute opacity-95 pointer-events-none z-0"
                 style={{

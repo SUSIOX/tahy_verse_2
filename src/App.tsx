@@ -86,7 +86,20 @@ const App: React.FC = () => {
     const [selectedTahId, setSelectedTahId] = useState<number>(TAH_IDS[0]);
     const [logs, setLogs] = useState<string[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [stageConfig, setStageConfig] = useState<StageConfig>(DEFAULT_STAGE_CONFIG);
+    const [stageConfig, setStageConfig] = useState<StageConfig>(() => {
+        try {
+            const saved = localStorage.getItem('tahy-stage-config');
+            return saved ? JSON.parse(saved) : DEFAULT_STAGE_CONFIG;
+        } catch (e) {
+            console.error('Failed to load stage config', e);
+            return DEFAULT_STAGE_CONFIG;
+        }
+    });
+
+    // Persist stageConfig whenever it changes
+    useEffect(() => {
+        localStorage.setItem('tahy-stage-config', JSON.stringify(stageConfig));
+    }, [stageConfig]);
     // Initialize hoistPositions from localStorage or default
     const [hoistPositions, setHoistPositions] = useState<HoistRegistry>(() => {
         try {
@@ -155,6 +168,24 @@ const App: React.FC = () => {
             return next;
         });
     }, []);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const result = e.target?.result as string;
+                updateStageConfig({ customBgImage: result });
+                addLog('Podkladový obrázek byl úspěšně změněn');
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const resetBackgroundImage = () => {
+        updateStageConfig({ customBgImage: undefined });
+        addLog('Podkladový obrázek byl resetován na výchozí');
+    };
 
     // Force update topLimitY if it's still the old default
     useEffect(() => {
@@ -281,6 +312,8 @@ const App: React.FC = () => {
             productionName,
             scenes,
             activeSceneId,
+            stageConfig,
+            hoistPositions,
             exportDate: new Date().toISOString()
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -306,7 +339,15 @@ const App: React.FC = () => {
                         setScenes(data.scenes);
                         setProductionName(data.productionName || 'Importovaná inscenace');
                         setActiveSceneId(data.activeSceneId || data.scenes[0]?.id || '1');
-                        addLog(`Scény importovány: ${data.scenes.length} scén`);
+
+                        if (data.stageConfig) {
+                            setStageConfig(data.stageConfig);
+                        }
+                        if (data.hoistPositions) {
+                            setHoistPositions(data.hoistPositions);
+                        }
+
+                        addLog(`Scény a konfigurace importovány: ${data.scenes.length} scén`);
                     } else {
                         alert('Neplatný formát souboru');
                     }
@@ -849,6 +890,32 @@ const App: React.FC = () => {
                                             onChange={e => updateStageConfig({ decorationWidth: Number(e.target.value) })}
                                             className="w-full bg-zinc-950 border-2 border-zinc-800/50 rounded-2xl px-6 py-5 text-zinc-100 font-mono text-xl focus:border-blue-500 outline-none transition-all shadow-inner"
                                         />
+                                    </div>
+                                    <div className="col-span-2 space-y-4">
+                                        <div className="flex justify-between items-end pl-1">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Podkladový obrázek</label>
+                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded-md">Doporučené rozlišení: 1125 × 789 px</span>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <label className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl cursor-pointer transition-all active:scale-[0.98] text-xs uppercase tracking-widest">
+                                                <Upload className="w-4 h-4" />
+                                                Nahrát nový obrázek
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            {stageConfig.customBgImage && (
+                                                <button
+                                                    onClick={resetBackgroundImage}
+                                                    className="px-6 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-2xl hover:bg-red-500/20 transition-all active:scale-[0.98] text-xs uppercase tracking-widest"
+                                                >
+                                                    Reset
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="col-span-2 p-6 bg-zinc-950/50 border border-zinc-800 rounded-3xl flex items-center justify-between">
                                         <div className="flex items-center gap-3">
