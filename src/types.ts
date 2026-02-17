@@ -58,9 +58,9 @@ export const TAH_IDS = [1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18];
 
 export const DEFAULT_STAGE_CONFIG: StageConfig = {
     stageHeightCm: 900,
-    topLimitY: 32.98,
+    topLimitY: 120.9,
     minHeightCm: 45,
-    zeroLevelY: 482,
+    zeroLevelY: 540,
     scale: 5.93,
     decorationWidth: 18
 };
