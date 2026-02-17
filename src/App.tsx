@@ -121,13 +121,30 @@ const App: React.FC = () => {
         localStorage.setItem('tahy-production-name', productionName);
     }, [productionName]);
 
-    // Initialize tahy from the active scene when component mounts or scenes change
+    // Initialize state from the active scene when component mounts or scenes change
     useEffect(() => {
         const activeScene = scenes.find(s => s.id === activeSceneId);
         if (activeScene) {
             setTahy(activeScene.tahy);
+            setVectorLines(activeScene.vectorLines || []);
+            setTextLabels(activeScene.textLabels || []);
         }
     }, [activeSceneId, scenes]);
+
+    // Sync current state to active scene in scenes array
+    const syncCurrentStateToScenes = useCallback((newTahy?: Record<number, TahState>, newVectors?: VectorLine[], newLabels?: TextLabel[]) => {
+        setScenes(prevScenes => prevScenes.map(s => {
+            if (s.id === activeSceneId) {
+                return {
+                    ...s,
+                    tahy: newTahy || s.tahy,
+                    vectorLines: newVectors || s.vectorLines || [],
+                    textLabels: newLabels || s.textLabels || []
+                };
+            }
+            return s;
+        }));
+    }, [activeSceneId]);
 
     const updateStageConfig = useCallback((updates: Partial<StageConfig>) => {
         setStageConfig((prev: StageConfig) => {
@@ -158,13 +175,25 @@ const App: React.FC = () => {
     const [textLabels, setTextLabels] = useState<TextLabel[]>([]);
     const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
     const [editingTextId, setEditingTextId] = useState<string | null>(null);
+    const handleUpdateTextLabels = useCallback((next: TextLabel[]) => {
+        setTextLabels(next);
+        syncCurrentStateToScenes(undefined, undefined, next);
+    }, [syncCurrentStateToScenes]);
 
     const updateTextLabel = (id: string, updates: Partial<TextLabel>) => {
-        setTextLabels(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+        setTextLabels(prev => {
+            const next = prev.map(l => l.id === id ? { ...l, ...updates } : l);
+            syncCurrentStateToScenes(undefined, undefined, next);
+            return next;
+        });
     };
 
     const removeTextLabel = (id: string) => {
-        setTextLabels(prev => prev.filter(l => l.id !== id));
+        setTextLabels(prev => {
+            const next = prev.filter(l => l.id !== id);
+            syncCurrentStateToScenes(undefined, undefined, next);
+            return next;
+        });
         if (selectedTextId === id) setSelectedTextId(null);
         if (editingTextId === id) setEditingTextId(null);
     };
@@ -185,6 +214,11 @@ const App: React.FC = () => {
         }
     };
 
+    const handleUpdateVectorLines = useCallback((next: VectorLine[]) => {
+        setVectorLines(next);
+        syncCurrentStateToScenes(undefined, next, undefined);
+    }, [syncCurrentStateToScenes]);
+
     const updateVectorLine = (id: string, updates: Partial<VectorLine>) => {
         if (id === 'default') {
             if (updates.lineStyle) setDefaultLineStyle(updates.lineStyle);
@@ -192,7 +226,11 @@ const App: React.FC = () => {
             if (updates.color) setBrushColor(updates.color);
             return;
         }
-        setVectorLines(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+        setVectorLines(prev => {
+            const next = prev.map(l => l.id === id ? { ...l, ...updates } : l);
+            syncCurrentStateToScenes(undefined, next, undefined);
+            return next;
+        });
     };
 
     const handleColorChange = (newColor: string) => {
@@ -347,7 +385,9 @@ const App: React.FC = () => {
             backgroundOpacity: 0.9
         };
 
-        setTextLabels(prev => [...prev, summaryLabel, productionLabel]);
+        const newLabels = [...textLabels, summaryLabel, productionLabel];
+        setTextLabels(newLabels);
+        syncCurrentStateToScenes(undefined, undefined, newLabels);
         setSelectedTextId(null); // Ukončit editaci textových polí
         setSelectedVectorId(null);
         setSelectedTahId(-1);
@@ -364,14 +404,11 @@ const App: React.FC = () => {
                 [id]: { ...currentTah, ...updates }
             };
 
-            // Sync with current scene
-            setScenes(prevScenes => prevScenes.map(s =>
-                s.id === activeSceneId ? { ...s, tahy: newTahy } : s
-            ));
+            syncCurrentStateToScenes(newTahy);
 
             return newTahy;
         });
-    }, [activeSceneId]);
+    }, [syncCurrentStateToScenes]);
 
     const selectedTah = tahy[selectedTahId];
 
@@ -678,7 +715,7 @@ const App: React.FC = () => {
                                 vectorLines={vectorLines}
                                 selectedVectorId={selectedVectorId}
                                 showVectorHandles={drawTool === 'select' || drawTool === 'text'}
-                                onUpdateVectorLines={setVectorLines}
+                                onUpdateVectorLines={handleUpdateVectorLines}
                                 onSelectVector={(id) => {
                                     setSelectedVectorId(id);
                                     if (id) {
@@ -691,7 +728,7 @@ const App: React.FC = () => {
                                 defaultLineWidth={defaultLineWidth}
                                 textLabels={textLabels}
                                 selectedTextId={selectedTextId}
-                                onUpdateTextLabels={setTextLabels}
+                                onUpdateTextLabels={handleUpdateTextLabels}
                                 onSelectText={(id) => {
                                     setSelectedTextId(id);
                                     if (id) {
@@ -1129,7 +1166,11 @@ const App: React.FC = () => {
             {/* Print Container */}
             <div className="print-only">
                 {scenes.map((scene) => (
-                    <div key={scene.id} className="print-page">
+                    <div key={scene.id} className="print-page py-10">
+                        <div className="w-full text-center mb-6">
+                            <h1 className="text-3xl font-black uppercase tracking-tighter">{productionName}</h1>
+                            <h2 className="text-xl font-bold text-zinc-600 uppercase tracking-widest">{scene.name}</h2>
+                        </div>
                         <div className="w-full flex justify-center">
                             <StageCanvas
                                 tahy={scene.tahy}
@@ -1149,6 +1190,7 @@ const App: React.FC = () => {
                                 onUpdateTextLabels={() => { }}
                                 onSelectText={() => { }}
                                 showVectorHandles={false}
+                                hoistPositions={hoistPositions}
                                 cropLeft={PRINT_VIEWPORT_X}
                                 cropTop={PRINT_VIEWPORT_Y}
                                 cropRight={1125 - PRINT_VIEWPORT_X - PRINT_VIEWPORT_W}
