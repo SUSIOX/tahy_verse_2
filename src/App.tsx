@@ -292,11 +292,8 @@ const App: React.FC = () => {
             const tah = activeScene.tahy[id];
             if (!tah) return;
 
-            // Zkontroluj, zda je tah použitý (má dekoraci/úvazek nebo není v defaultní pozici)
-            const hasDecoration = tah.dek > 0 || tah.uva > 0;
-            const isNonDefaultPosition = tah.pod !== 0 || tah.isHanging;
-
-            if (hasDecoration || isNonDefaultPosition) {
+            // Do soupisu zahrň pouze tahy, které mají zavěšenou dekoraci
+            if (tah.isHanging) {
                 // Formát: TAH výška (dekorace) úvazek [Název]
                 const totalHeight = tah.pod + tah.dek + tah.uva;
                 let line = `${id}  ${totalHeight}cm`;
