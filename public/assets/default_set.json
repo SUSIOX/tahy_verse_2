@@ -1,0 +1,535 @@
+{
+  "productionName": "Moje Inscenace",
+  "scenes": [
+    {
+      "id": "1",
+      "name": "Scéna 1",
+      "tahy": {
+        "1": {
+          "id": 1,
+          "dek": 50,
+          "uva": 30,
+          "pod": 127,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": true,
+          "name": "Banány"
+        },
+        "2": {
+          "id": 2,
+          "dek": 1,
+          "uva": 0,
+          "pod": 571,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": false,
+          "name": "volný"
+        },
+        "3": {
+          "id": 3,
+          "dek": 10,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "5": {
+          "id": 5,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "6": {
+          "id": 6,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "7": {
+          "id": 7,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "8": {
+          "id": 8,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "9": {
+          "id": 9,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "10": {
+          "id": 10,
+          "dek": 50,
+          "uva": 400,
+          "pod": 181,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": false,
+          "name": "Koryto"
+        },
+        "12": {
+          "id": 12,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "13": {
+          "id": 13,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "14": {
+          "id": 14,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "15": {
+          "id": 15,
+          "dek": 479,
+          "uva": 30,
+          "pod": 335,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": false,
+          "name": "Stěna"
+        },
+        "17": {
+          "id": 17,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "18": {
+          "id": 18,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        }
+      },
+      "vectorLines": [
+        {
+          "id": "vline-1771291849569",
+          "start": {
+            "x": 292,
+            "y": 405
+          },
+          "end": {
+            "x": 292,
+            "y": 405
+          },
+          "color": "#000000",
+          "lineStyle": "dashed",
+          "lineWidth": 1
+        },
+        {
+          "id": "vline-1771291855509",
+          "start": {
+            "x": 365,
+            "y": 447
+          },
+          "end": {
+            "x": 365,
+            "y": 447
+          },
+          "color": "#000000",
+          "lineStyle": "dashed",
+          "lineWidth": 1
+        },
+        {
+          "id": "vline-1771292004288",
+          "start": {
+            "x": 473,
+            "y": 371
+          },
+          "end": {
+            "x": 473,
+            "y": 371
+          },
+          "color": "#000000",
+          "lineStyle": "dashed",
+          "lineWidth": 1
+        },
+        {
+          "id": "vline-1771292090267",
+          "start": {
+            "x": 500,
+            "y": 421
+          },
+          "end": {
+            "x": 500,
+            "y": 421
+          },
+          "color": "#000000",
+          "lineStyle": "dashed",
+          "lineWidth": 1
+        },
+        {
+          "id": "vline-1771292424745",
+          "start": {
+            "x": 711,
+            "y": 94
+          },
+          "end": {
+            "x": 769,
+            "y": 286
+          },
+          "color": "#000000",
+          "lineStyle": "dashed",
+          "lineWidth": 1
+        }
+      ],
+      "textLabels": [
+        {
+          "id": "summary-1771290568183",
+          "pos": {
+            "x": 50,
+            "y": 150
+          },
+          "text": "<span style=\"font-family: monospace; font-weight: 900; font-size: 18px; color: #000;\">SOUPIS TAHŮ</span><br/><span style=\"font-family: monospace; font-size: 10px; color: #888; font-weight: bold; text-transform: uppercase;\">výška rozměr úvazek název</span><br/><span style=\"font-family: monospace; font-size: 13px;\"><strong>TAH 1</strong>: 45cm (50cm) <span style=\"color: red; font-weight: bold;\">30cm</span> - <span style=\"color: #3b82f6; font-weight: bold;\">Banány</span><br/><strong>TAH 2</strong>: 572cm (1cm) - <span style=\"color: #3b82f6; font-weight: bold;\">volný</span><br/><strong>TAH 3</strong>: 910cm (10cm)<br/><strong>TAH 10</strong>: 631cm (50cm) <span style=\"color: red; font-weight: bold;\">400cm</span> - <span style=\"color: #3b82f6; font-weight: bold;\">Koryto</span><br/><strong>TAH 15</strong>: 844cm (479cm) <span style=\"color: red; font-weight: bold;\">30cm</span> - <span style=\"color: #3b82f6; font-weight: bold;\">Stěna</span></span>",
+          "color": "#000000",
+          "fontSize": 14,
+          "width": 314,
+          "backgroundColor": "#ffffff",
+          "backgroundOpacity": 0.9
+        },
+        {
+          "id": "production-1771290568183",
+          "pos": {
+            "x": 58,
+            "y": 79
+          },
+          "text": "<span style=\"font-weight: 900; font-size: 24px;\">Moje Inscenace</span>",
+          "color": "#ec0e0e",
+          "fontSize": 46,
+          "backgroundColor": "#ffffff",
+          "backgroundOpacity": 0.9
+        },
+        {
+          "id": "text-1771290584882",
+          "pos": {
+            "x": 759,
+            "y": 510
+          },
+          "text": "Klikněte pro úpravu",
+          "color": "#000000",
+          "fontSize": 16,
+          "width": 208
+        },
+        {
+          "id": "text-1771290600143",
+          "pos": {
+            "x": 446,
+            "y": 570
+          },
+          "text": "Klikněte pro úpravu",
+          "color": "#000000",
+          "fontSize": 16
+        },
+        {
+          "id": "text-1771291530789",
+          "pos": {
+            "x": 190,
+            "y": 623
+          },
+          "text": "Klikněte pro úpravu",
+          "color": "#000000",
+          "fontSize": 16
+        },
+        {
+          "id": "text-1771291534031",
+          "pos": {
+            "x": 387,
+            "y": 646
+          },
+          "text": "Klikněte pro úpravu",
+          "color": "#000000",
+          "fontSize": 16
+        },
+        {
+          "id": "text-1771292412485",
+          "pos": {
+            "x": 232,
+            "y": 458
+          },
+          "text": "Klikněte pro úpravu",
+          "color": "#000000",
+          "fontSize": 16
+        }
+      ]
+    },
+    {
+      "id": "1771245525379",
+      "name": "Scéna 2",
+      "tahy": {
+        "1": {
+          "id": 1,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "2": {
+          "id": 2,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "3": {
+          "id": 3,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "5": {
+          "id": 5,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "6": {
+          "id": 6,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "7": {
+          "id": 7,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "8": {
+          "id": 8,
+          "dek": 137,
+          "uva": 140,
+          "pod": 202,
+          "isHanging": true,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "9": {
+          "id": 9,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "10": {
+          "id": 10,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "12": {
+          "id": 12,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "13": {
+          "id": 13,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "14": {
+          "id": 14,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "15": {
+          "id": 15,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "17": {
+          "id": 17,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        },
+        "18": {
+          "id": 18,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
+          "isTopLimit": false,
+          "isBottomLimit": false
+        }
+      },
+      "vectorLines": [],
+      "textLabels": [
+        {
+          "id": "summary-1771292708606-fjs6bxpi1",
+          "pos": {
+            "x": 50,
+            "y": 150
+          },
+          "text": "<span style=\"font-family: monospace; font-weight: 900; font-size: 18px; color: #000;\">SOUPIS TAHŮ</span><br/><span style=\"font-family: monospace; font-size: 10px; color: #888; font-weight: bold; text-transform: uppercase;\">výška rozměr úvazek název</span><br/><span style=\"font-family: monospace; font-size: 13px;\"><strong>TAH 8</strong>: 479cm (137cm) <span style=\"color: red; font-weight: bold;\">140cm</span></span>",
+          "color": "#000000",
+          "fontSize": 14,
+          "width": 300,
+          "backgroundColor": "#ffffff",
+          "backgroundOpacity": 0.9
+        },
+        {
+          "id": "production-1771292708606-yhynapr9k",
+          "pos": {
+            "x": 50,
+            "y": 50
+          },
+          "text": "<span style=\"font-weight: 900; font-size: 24px;\">Moje Inscenace</span>",
+          "color": "#000000",
+          "fontSize": 24,
+          "backgroundColor": "#ffffff",
+          "backgroundOpacity": 0.9
+        }
+      ]
+    }
+  ],
+  "activeSceneId": "1771245525379",
+  "stageConfig": {
+    "stageHeightCm": 900,
+    "topLimitY": 120.9,
+    "minHeightCm": 45,
+    "zeroLevelY": 540,
+    "scale": 5.93,
+    "decorationWidth": 18
+  },
+  "hoistPositions": {
+    "1": {
+      "x": 699.2
+    },
+    "2": {
+      "x": 712
+    },
+    "3": {
+      "x": 726
+    },
+    "4": {
+      "x": 789.2
+    },
+    "5": {
+      "x": 761
+    },
+    "6": {
+      "x": 775
+    },
+    "7": {
+      "x": 790
+    },
+    "8": {
+      "x": 803
+    },
+    "9": {
+      "x": 817
+    },
+    "10": {
+      "x": 830
+    },
+    "11": {
+      "x": 999.2
+    },
+    "12": {
+      "x": 862
+    },
+    "13": {
+      "x": 874
+    },
+    "14": {
+      "x": 888
+    },
+    "15": {
+      "x": 924
+    },
+    "16": {
+      "x": 1149.2
+    },
+    "17": {
+      "x": 950
+    },
+    "18": {
+      "x": 963
+    }
+  },
+  "exportDate": "2026-02-17T01:56:21.243Z"
+}

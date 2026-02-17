@@ -40,6 +40,7 @@ import {
     Printer,
     TriangleAlert
 } from 'lucide-react';
+import defaultSet from '../public/assets/default_set.json';
 
 const App: React.FC = () => {
     // Helper to get initial tahy state
@@ -65,11 +66,11 @@ const App: React.FC = () => {
     // Scene Management State
     const [productionName, setProductionName] = useState(() => {
         const saved = localStorage.getItem('tahy-production-name');
-        return saved || "Moje Inscenace";
+        return saved || defaultSet.productionName || "Moje Inscenace";
     });
     const [activeSceneId, setActiveSceneId] = useState(() => {
         const saved = localStorage.getItem('tahy-active-scene-id');
-        return saved || "1";
+        return saved || defaultSet.activeSceneId || "1";
     });
     const [scenes, setScenes] = useState<Scene[]>(() => {
         const saved = localStorage.getItem('tahy-scenes');
@@ -80,7 +81,7 @@ const App: React.FC = () => {
                 console.error('Failed to load scenes from localStorage:', e);
             }
         }
-        return [{ id: "1", name: "Scéna 1", tahy: getInitialTahy() }];
+        return (defaultSet.scenes as Scene[]) || [{ id: "1", name: "Scéna 1", tahy: getInitialTahy() }];
     });
 
     const [selectedTahId, setSelectedTahId] = useState<number>(TAH_IDS[0]);
@@ -89,7 +90,8 @@ const App: React.FC = () => {
     const [stageConfig, setStageConfig] = useState<StageConfig>(() => {
         try {
             const saved = localStorage.getItem('tahy-stage-config');
-            return saved ? JSON.parse(saved) : DEFAULT_STAGE_CONFIG;
+            if (saved) return JSON.parse(saved);
+            return (defaultSet.stageConfig as StageConfig) || DEFAULT_STAGE_CONFIG;
         } catch (e) {
             console.error('Failed to load stage config', e);
             return DEFAULT_STAGE_CONFIG;
@@ -100,11 +102,13 @@ const App: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('tahy-stage-config', JSON.stringify(stageConfig));
     }, [stageConfig]);
+
     // Initialize hoistPositions from localStorage or default
     const [hoistPositions, setHoistPositions] = useState<HoistRegistry>(() => {
         try {
             const saved = localStorage.getItem('tahy-hoist-positions');
-            return saved ? JSON.parse(saved) : DEFAULT_HOIST_POSITIONS;
+            if (saved) return JSON.parse(saved);
+            return (defaultSet.hoistPositions as HoistRegistry) || DEFAULT_HOIST_POSITIONS;
         } catch (e) {
             console.error('Failed to load hoist positions', e);
             return DEFAULT_HOIST_POSITIONS;
