@@ -296,19 +296,18 @@ const App: React.FC = () => {
             if (tah.isHanging) {
                 // Formát: ID | výška | rozměr | úvazek | název
                 const totalHeight = tah.pod + tah.dek + tah.uva;
+                let line = `<strong>TAH ${id}</strong>: ${totalHeight}cm`;
 
-                // Helper to pad strings for semi-alignment in monospace
-                const pad = (str: any, len: number) => str.toString().padEnd(len, ' ');
+                if (tah.dek > 0) {
+                    line += ` (${tah.dek}cm)`;
+                }
 
-                let line = `<strong>${pad(id, 3)}</strong> | `;
-                line += `${pad(totalHeight + 'cm', 7)} | `;
-                line += `${pad(tah.dek + 'cm', 7)} | `;
-                line += `<span style="color: red; font-weight: bold;">${pad(tah.uva + 'cm', 7)}</span> | `;
+                if (tah.uva > 0) {
+                    line += ` <span style="color: red; font-weight: bold;">${tah.uva}cm</span>`;
+                }
 
                 if (tah.name) {
-                    line += `<span style="color: #3b82f6; font-weight: bold;">${tah.name}</span>`;
-                } else {
-                    line += `<span style="color: #ccc;">-</span>`;
+                    line += ` - <span style="color: #3b82f6; font-weight: bold;">${tah.name}</span>`;
                 }
 
                 usedHoists.push(line);
@@ -322,10 +321,10 @@ const App: React.FC = () => {
 
         // Vytvoř textový soupis s HTML formátováním
         const summaryText = `
-            <div style="font-family: monospace; min-width: 350px;">
+            <div style="font-family: monospace;">
                 <div style="font-weight: 900; font-size: 18px; margin-bottom: 2px; color: #000;">SOUPIS TAHŮ</div>
-                <div style="font-size: 10px; color: #888; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                    tah | výška | rozměr | úvazek | název
+                <div style="font-size: 10px; color: #888; margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">
+                    výška rozměr úvazek název
                 </div>
                 <div style="line-height: 1.5; font-size: 13px;">
                     ${usedHoists.join('<br/>')}
@@ -340,7 +339,7 @@ const App: React.FC = () => {
             text: summaryText,
             color: '#000000',
             fontSize: 14,
-            width: 450,
+            width: 300,
             backgroundColor: '#ffffff',
             backgroundOpacity: 0.9
         };
