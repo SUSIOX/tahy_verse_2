@@ -612,6 +612,10 @@ const App: React.FC = () => {
                         <div className="flex flex-col gap-1 ml-[50px]">
                             <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">
                                 {(() => {
+                                    if (selectedTah) return `Scénický Tah ${selectedTahId}`;
+                                    if (selectedVectorId) return 'Editace popisků - Vektorová Linka';
+                                    if (selectedTextId) return 'Editace popisků - Textové pole';
+
                                     const toolNames: Record<string, string> = {
                                         select: 'Výběr',
                                         pen: 'Štětec',
