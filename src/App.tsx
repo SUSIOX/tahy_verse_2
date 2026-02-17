@@ -9,9 +9,16 @@ import {
     Point,
     Scene,
     LineStyle,
-    TextLabel
+    TextLabel,
+    DEFAULT_HOIST_POSITIONS,
+    HoistRegistry
 } from './types';
-import StageCanvas from './components/StageCanvas';
+import StageCanvas, {
+    PRINT_VIEWPORT_X,
+    PRINT_VIEWPORT_Y,
+    PRINT_VIEWPORT_W,
+    PRINT_VIEWPORT_H
+} from './components/StageCanvas';
 import ControlPanel from './components/ControlPanel';
 import LogPanel from './components/LogPanel';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,7 +37,8 @@ import {
     Download,
     Upload,
     Type,
-    Printer
+    Printer,
+    TriangleAlert
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -79,6 +87,22 @@ const App: React.FC = () => {
     const [logs, setLogs] = useState<string[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [stageConfig, setStageConfig] = useState<StageConfig>(DEFAULT_STAGE_CONFIG);
+    // Initialize hoistPositions from localStorage or default
+    const [hoistPositions, setHoistPositions] = useState<HoistRegistry>(() => {
+        try {
+            const saved = localStorage.getItem('tahy-hoist-positions');
+            return saved ? JSON.parse(saved) : DEFAULT_HOIST_POSITIONS;
+        } catch (e) {
+            console.error('Failed to load hoist positions', e);
+            return DEFAULT_HOIST_POSITIONS;
+        }
+    });
+    // Persist hoistPositions whenever they change
+    useEffect(() => {
+        localStorage.setItem('tahy-hoist-positions', JSON.stringify(hoistPositions));
+    }, [hoistPositions]);
+
+    const [isPositioningMode, setIsPositioningMode] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [focusedPixelValue, setFocusedPixelValue] = useState<number | null>(null);
 
@@ -115,6 +139,13 @@ const App: React.FC = () => {
         });
     }, []);
 
+    // Force update topLimitY if it's still the old default
+    useEffect(() => {
+        if (stageConfig.topLimitY === 32.98 || stageConfig.topLimitY === 43) {
+            updateStageConfig({ topLimitY: 124.9 });
+        }
+    }, [stageConfig.topLimitY, updateStageConfig]);
+
     const [brushColor, setBrushColor] = useState('#000000'); // Default to black
     const [drawTool, setDrawTool] = useState<'pen' | 'eraser' | 'line' | 'select' | 'text'>('pen');
     const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -136,6 +167,22 @@ const App: React.FC = () => {
         setTextLabels(prev => prev.filter(l => l.id !== id));
         if (selectedTextId === id) setSelectedTextId(null);
         if (editingTextId === id) setEditingTextId(null);
+    };
+
+    const handleTogglePositioningMode = () => {
+        if (isPositioningMode) {
+            // Exit mode
+            setIsPositioningMode(false);
+            addLog('Ukončeno ruční pozicování tahů - Pozice uloženy');
+        } else {
+            // Enter mode
+            setIsPositioningMode(true);
+            setSelectedTahId(-1); // Deselect everything
+            setSelectedTextId(null);
+            setSelectedVectorId(null);
+            setIsSidebarOpen(true); // Ensure sidebar is open to show the toggle button
+            addLog('Spuštěno ruční pozicování tahů');
+        }
     };
 
     const updateVectorLine = (id: string, updates: Partial<VectorLine>) => {
@@ -235,6 +282,67 @@ const App: React.FC = () => {
         event.target.value = '';
     };
 
+    const generateSceneSummary = () => {
+        const activeScene = scenes.find(s => s.id === activeSceneId);
+        if (!activeScene) return;
+
+        const usedHoists: string[] = [];
+
+        TAH_IDS.forEach(id => {
+            const tah = activeScene.tahy[id];
+            if (!tah) return;
+
+            // Zkontroluj, zda je tah použitý (má dekoraci/úvazek nebo není v defaultní pozici)
+            const hasDecoration = tah.dek > 0 || tah.uva > 0;
+            const isNonDefaultPosition = tah.pod !== 0 || tah.isHanging;
+
+            if (hasDecoration || isNonDefaultPosition) {
+                // Formát: [Název] TAH výška (dekorace) úvazek
+                const totalHeight = tah.pod + tah.dek + tah.uva;
+                let line = ``;
+
+                if (tah.name) {
+                    line += `<span style="color: #60a5fa; font-weight: bold;">${tah.name}</span> - `;
+                }
+
+                line += `${id}  ${totalHeight}cm`;
+
+                if (tah.dek > 0) {
+                    line += ` (${tah.dek}cm)`;
+                }
+
+                if (tah.uva > 0) {
+                    line += ` <span style="color: red; font-weight: bold;">${tah.uva}cm</span>`;
+                }
+
+                usedHoists.push(line);
+            }
+        });
+
+        if (usedHoists.length === 0) {
+            addLog('Žádné tahy k zobrazení v soupisu');
+            return;
+        }
+
+        // Vytvoř textový soupis s HTML formátováním
+        const summaryText = `<div style="font-family: monospace;"><strong>SOUPIS TAHŮ - ${activeScene.name}</strong><br/><br/>${usedHoists.join('<br/>')}</div>`;
+
+        // Přidej textové pole do levé části obrazu (cca x: 250, y: 300)
+        const newLabel: TextLabel = {
+            id: `summary-${Date.now()}`,
+            pos: { x: 250, y: 300 },
+            text: summaryText,
+            color: '#000000',
+            fontSize: 14,
+            width: 300,
+            backgroundColor: '#ffffff',
+            backgroundOpacity: 0.9
+        };
+
+        setTextLabels(prev => [...prev, newLabel]);
+        addLog(`Soupis tahů vytvořen pro scénu: ${activeScene.name}`);
+    };
+
 
     const updateTah = useCallback((id: number, updatesOrFn: Partial<TahState> | ((prev: TahState) => Partial<TahState>)) => {
         setTahy(prev => {
@@ -264,9 +372,16 @@ const App: React.FC = () => {
                         initial={{ width: 0, opacity: 0 }}
                         animate={{ width: 400, opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
-                        className="h-full flex flex-col z-40 overflow-hidden relative border-r border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl shadow-2xl flex-shrink-0"
+                        className="h-full flex flex-col z-40 overflow-hidden relative border-r border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl shadow-2xl flex-shrink-0 no-print transition-all duration-500"
+                        style={{ filter: isPositioningMode ? 'blur(0px)' : 'none' }} // Sidebar itself is not blurred, but content inside might be selectively handled, or we blur everything ELSE. 
+                    // Actually user request: "vsechno krome obrazku a icony menu je blure"
+                    // But the triangle icon is IN the menu (ControlPanel). So we should probably keep the ControlPanel visible but maybe blur other parts?
+                    // Or better: The user said "menu zmizi" (disappears) BUT "active triangle... everything except image and menu icon is blurred".
+                    // "jak budu hotov zase kliknu na trojuhelnik v menu configu".
+                    // This implies the menu MUST remain visible OR the triangle button moves/stays visible. 
+                    // Implementation: We will blur the *contents* of the sidebar except the button, or just blur the main UI overlays.
                     >
-                        <div className="p-8 border-b border-zinc-800/50 bg-zinc-900/50">
+                        <div className={`p-8 border-b border-zinc-800/50 bg-zinc-900/50 transition-all duration-500 ${isPositioningMode ? 'opacity-20 blur-sm pointer-events-none' : ''}`}>
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20 rotate-3 group-hover:rotate-0 transition-transform">
@@ -274,7 +389,7 @@ const App: React.FC = () => {
                                     </div>
                                     <div>
                                         <h1 className="text-xl font-black tracking-tighter uppercase leading-none">Tahy Jirka</h1>
-                                        <span className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">Verse 2.0</span>
+                                        <span className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">Verze 2.0</span>
                                     </div>
                                 </div>
                                 <button
@@ -286,7 +401,12 @@ const App: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-900/20">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-900/20 relative">
+                            {/* Blur Overlay for Sidebar Content when in Positioning Mode, excluding the Control Panel top part? 
+                                Actually, the button is INSIDE ControlPanel. We need to pass the "blur mode" down to ControlPanel 
+                                so it can blur everything EXCEPT the toggle button. 
+                                OR easier: we just accept that the whole sidebar stays visible for now, or we style ControlPanel carefully.
+                                Let's try to blur the rest of the app.*/}
                             <div className="p-8 space-y-8">
                                 <ControlPanel
                                     selectedId={selectedTahId}
@@ -318,10 +438,12 @@ const App: React.FC = () => {
                                     onAddLog={addLog}
                                     stageConfig={stageConfig}
                                     onUpdateConfig={setStageConfig}
+                                    onTogglePositioningMode={handleTogglePositioningMode}
+                                    isPositioningMode={isPositioningMode}
                                 />
 
-                                {/* Production and Scene Management Panel */}
-                                <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-2xl p-6 space-y-6">
+                                {/* Production and Scene Management Panel - Blurred in positioning mode */}
+                                <div className={`bg-zinc-800/30 border border-zinc-700/50 rounded-2xl p-6 space-y-6 transition-all duration-500 ${isPositioningMode ? 'opacity-20 blur-sm pointer-events-none' : ''}`}>
                                     <div className="space-y-4">
                                         <h3 className="text-sm font-black text-zinc-300 uppercase tracking-wider">Inscenace</h3>
                                         <input
@@ -390,6 +512,14 @@ const App: React.FC = () => {
                                                     </label>
 
                                                     <button
+                                                        onClick={generateSceneSummary}
+                                                        className="p-1.5 bg-green-700/30 hover:bg-green-700/50 rounded-lg text-green-400 hover:text-green-300 transition-all"
+                                                        title="Vytvořit soupis tahů"
+                                                    >
+                                                        <Save className="w-3 h-3" />
+                                                    </button>
+
+                                                    <button
                                                         onClick={() => {
                                                             if (confirm('Opravdu chcete smazat aktuální scénu?')) {
                                                                 setScenes(prev => prev.filter(s => s.id !== activeSceneId));
@@ -410,18 +540,18 @@ const App: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <LogPanel logs={logs} />
+                                <LogPanel logs={logs} className={isPositioningMode ? 'opacity-20 blur-sm pointer-events-none transition-all duration-500' : 'transition-all duration-500'} />
                             </div>
                         </div>
                     </motion.aside>
                 )}
             </AnimatePresence>
 
-            <main className="flex-1 relative flex flex-col bg-[#050505]">
+            <main className="flex-1 relative flex flex-col bg-[#050505] no-print">
 
 
-                {/* Visual context info */}
-                <div className="absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between no-print">
+                {/* Visual context info - Blurred when in positioning mode */}
+                <div className={`absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between no-print transition-all duration-500 ${isPositioningMode ? 'opacity-0 blur-md' : ''}`}>
                     <div className="flex items-center gap-8">
                         {!isSidebarOpen && (
                             <button
@@ -447,7 +577,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 z-40 pointer-events-auto">
+                    <div className="flex items-center gap-4 z-40 pointer-events-auto" style={{ marginTop: '-7px' }}>
                         <button
                             onClick={() => window.print()}
                             className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 shadow-2xl"
@@ -464,10 +594,10 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 relative bg-black/40 flex items-center justify-center p-12 mt-[10px]">
+                <div className="flex-1 relative bg-black/40 flex items-start justify-start pt-[60px] px-6 pb-6 mt-[10px] overflow-auto custom-scrollbar">
                     <div className="w-full h-full relative flex flex-col items-center">
-                        {/* Drawing Tools Overlay */}
-                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel rounded-3xl p-2 flex items-center gap-2 z-40 border border-zinc-800 shadow-2xl bg-zinc-900/90 backdrop-blur-md no-print">
+                        {/* Drawing Tools Overlay - Blurred when in positioning mode */}
+                        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel rounded-3xl p-2 flex items-center gap-2 z-40 border border-zinc-800 shadow-2xl bg-zinc-900/90 backdrop-blur-md no-print transition-all duration-500 ${isPositioningMode ? 'opacity-0 blur-md pointer-events-none' : ''}`}>
                             <button
                                 onClick={() => setIsDrawingMode(!isDrawingMode)}
                                 className={`p-4 rounded-2xl transition-all ${isDrawingMode ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-zinc-800 text-zinc-400'}`}
@@ -522,7 +652,8 @@ const App: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="relative glass-panel rounded-[3rem] overflow-hidden shadow-[0_64px_128px_-32px_rgba(0,0,0,0.7)] p-8 bg-[#0a0a0a] border border-zinc-800/50">
+                        {/* Main Stage Canvas: Not Blurred, but pass positioning props */}
+                        <div className="relative glass-panel rounded-3xl overflow-hidden shadow-[0_64px_128px_-32px_rgba(0,0,0,0.7)] p-0 bg-[#0a0a0a] border border-zinc-800/50">
                             <StageCanvas
                                 tahy={tahy}
                                 selectedId={selectedTahId}
@@ -558,6 +689,10 @@ const App: React.FC = () => {
                                     }
                                 }}
                                 onTextDoubleClick={(id) => setEditingTextId(id)}
+                                hoistPositions={hoistPositions}
+                                onUpdateHoistPositions={setHoistPositions}
+                                isPositioningMode={isPositioningMode}
+                                onUpdateTopLimitY={(y) => updateStageConfig({ topLimitY: y })}
                             />
                         </div>
                     </div>
@@ -666,6 +801,17 @@ const App: React.FC = () => {
                                             {stageConfig.scale.toFixed(4)} <span className="text-xs text-zinc-600 ml-1">px/cm</span>
                                         </div>
                                     </div>
+                                    {/* Manual Positioning Toggle */}
+                                    <button
+                                        onClick={handleTogglePositioningMode}
+                                        className={`w-full py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-[0.1em] ${isPositioningMode
+                                            ? 'bg-amber-500 text-black shadow-[0_0_30px_rgba(245,158,11,0.4)] animate-pulse'
+                                            : 'bg-zinc-800 text-amber-500 hover:bg-zinc-700 hover:text-amber-400'
+                                            }`}
+                                    >
+                                        <TriangleAlert className="w-5 h-5" />
+                                        {isPositioningMode ? 'Ukončit ruční pozicování' : 'Zapnout ruční pozicování tahů'}
+                                    </button>
                                 </div>
 
                                 <button
@@ -973,56 +1119,31 @@ const App: React.FC = () => {
             <div className="print-only">
                 {scenes.map((scene) => (
                     <div key={scene.id} className="print-page">
-                        <div className="p-8 w-full">
-                            <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-6">
-                                <div>
-                                    <h1 className="text-3xl font-black uppercase tracking-tighter">{productionName}</h1>
-                                    <h2 className="text-xl font-bold text-zinc-600">Scéna: {scene.name}</h2>
-                                </div>
-                                <div className="text-right text-sm font-mono text-zinc-400">
-                                    Vytvořeno v aplikaci Tahy & Kulisář
-                                </div>
-                            </div>
+                        <div className="w-full flex justify-center">
+                            <StageCanvas
+                                tahy={scene.tahy}
+                                stageConfig={stageConfig}
+                                vectorLines={scene.vectorLines || []}
+                                textLabels={scene.textLabels || []}
+                                selectedId={-1}
+                                selectedVectorId={null}
+                                selectedTextId={null}
+                                onSelectTah={() => { }}
+                                onUpdateTah={() => { }}
+                                drawingColor="#000000"
+                                drawTool="select"
+                                isDrawingEnabled={false}
+                                onUpdateVectorLines={() => { }}
+                                onSelectVector={() => { }}
+                                onUpdateTextLabels={() => { }}
+                                onSelectText={() => { }}
+                                showVectorHandles={false}
+                                cropLeft={PRINT_VIEWPORT_X}
+                                cropTop={PRINT_VIEWPORT_Y}
+                                cropRight={1125 - PRINT_VIEWPORT_X - PRINT_VIEWPORT_W}
+                                cropBottom={789 - PRINT_VIEWPORT_Y - PRINT_VIEWPORT_H}
 
-                            <div className="flex justify-center bg-white border border-zinc-200">
-                                <StageCanvas
-                                    tahy={scene.tahy}
-                                    stageConfig={stageConfig}
-                                    vectorLines={scene.vectorLines || []}
-                                    textLabels={scene.textLabels || []}
-                                    selectedId={-1}
-                                    selectedVectorId={null}
-                                    selectedTextId={null}
-                                    onSelectTah={() => { }}
-                                    onUpdateTah={() => { }}
-                                    drawingColor="#000000"
-                                    drawTool="select"
-                                    isDrawingEnabled={false}
-                                    onUpdateVectorLines={() => { }}
-                                    onSelectVector={() => { }}
-                                    onUpdateTextLabels={() => { }}
-                                    onSelectText={() => { }}
-                                    showVectorHandles={false}
-                                />
-                            </div>
-
-                            <div className="mt-8 grid grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <h3 className="font-black uppercase tracking-wider text-xs border-b border-zinc-200 pb-2">Poznámky k tahům</h3>
-                                    <div className="text-sm space-y-2">
-                                        {Object.values(scene.tahy)
-                                            .filter(t => t.isHanging || t.dek > 0)
-                                            .sort((a, b) => a.id - b.id)
-                                            .map(t => (
-                                                <div key={t.id} className="flex gap-4">
-                                                    <span className="font-bold w-12">Tah {t.id}:</span>
-                                                    <span>{t.dek}cm dekorace, {t.uva}cm úvazek, {t.pod}cm od země</span>
-                                                </div>
-                                            ))
-                                        }
-                                    </div>
-                                </div>
-                            </div>
+                            />
                         </div>
                     </div>
                 ))}

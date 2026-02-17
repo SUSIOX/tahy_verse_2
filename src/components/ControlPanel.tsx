@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { TahState, TAH_IDS, StageConfig } from '../types';
-import { Anchor, ArrowUp, ArrowDownUp, XCircle, Trash2, Info, ChevronUp, ChevronDown } from 'lucide-react';
+import { Anchor, ArrowUp, ArrowDownUp, XCircle, Trash2, Info, ChevronUp, ChevronDown, TriangleAlert } from 'lucide-react';
 
 interface SmartBtnProps {
     onStep: (dir: 1 | -1) => void;
@@ -65,6 +65,8 @@ interface Props {
     onAddLog: (msg: string) => void;
     stageConfig: StageConfig;
     onUpdateConfig: (config: StageConfig) => void;
+    onTogglePositioningMode: () => void;
+    isPositioningMode: boolean;
 }
 
 const ControlPanel: React.FC<Props> = ({
@@ -75,7 +77,10 @@ const ControlPanel: React.FC<Props> = ({
     onClearAll,
     onAddLog,
     stageConfig,
+    onUpdateConfig,
     onHang,
+    onTogglePositioningMode,
+    isPositioningMode
 }) => {
     if (!tah) {
         return (
@@ -128,7 +133,7 @@ const ControlPanel: React.FC<Props> = ({
     };
 
     const handleUnhang = () => {
-        onUpdate(selectedId, { isHanging: false, dek: 0, uva: 0, pod: 0 });
+        onUpdate(selectedId, { isHanging: false, dek: 0, uva: 0, pod: 0, name: '' });
         onAddLog(`Tah ${selectedId}: Dekorace odvěšena`);
     };
 
@@ -177,6 +182,7 @@ const ControlPanel: React.FC<Props> = ({
                         <Trash2 className="w-3 h-3" /> VYMAZAT VŠE
                     </button>
                 </div>
+
 
                 <div className="relative">
                     <select
@@ -258,6 +264,22 @@ const ControlPanel: React.FC<Props> = ({
                     <Anchor className="w-6 h-6" /> ZAVĚSIT DEKORACI
                 </button>
 
+                {/* Decoration Name Input - Shows only when hanging */}
+                {tah.isHanging && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="text-[10px] font-bold text-blue-400 uppercase flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Název dekorace
+                        </label>
+                        <input
+                            type="text"
+                            value={tah.name || ''}
+                            onChange={(e) => onUpdate(selectedId, { name: e.target.value })}
+                            className="w-full bg-zinc-900 border border-blue-500/30 rounded-xl px-4 py-3 text-sm font-bold text-zinc-100 outline-none focus:border-blue-500 transition-all placeholder-zinc-700"
+                            placeholder="Např. Opona, Les, Praktikábly..."
+                        />
+                    </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                     <button
                         onClick={handleTopLimit}
@@ -287,6 +309,7 @@ const ControlPanel: React.FC<Props> = ({
                 >
                     <XCircle className="w-4 h-4" /> ODVĚSIT
                 </button>
+
             </div>
 
             <div className="flex items-start gap-3 p-4 bg-blue-900/10 rounded-xl border border-blue-900/20">

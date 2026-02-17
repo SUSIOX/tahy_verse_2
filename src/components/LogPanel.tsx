@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
     logs: string[];
+    className?: string;
 }
 
-const LogPanel: React.FC<Props> = ({ logs }) => {
+const LogPanel: React.FC<Props> = ({ logs, className = '' }) => {
     return (
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-black/40 rounded-xl border border-zinc-800 p-2 space-y-1">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar bg-black/40 rounded-xl border border-zinc-800 p-2 space-y-1 ${className}`}>
             <AnimatePresence initial={false}>
                 {logs.length === 0 ? (
                     <div className="text-zinc-600 text-[11px] p-4 text-center italic">

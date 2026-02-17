@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useMemo } from 'react';
-import { TahState, TAH_IDS, StageConfig, Point, VectorLine, LineStyle, TextLabel } from '../types';
+import { TahState, TAH_IDS, StageConfig, Point, VectorLine, LineStyle, TextLabel, HoistRegistry } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import DrawingLayer from './DrawingLayer';
-import stageBgImage from '/assets/stage-bg.jpg?url';
+import stageBgImage from '/assets/Tahy_A4.png?url';
 
 interface Props {
     tahy: Record<number, TahState>;
@@ -28,33 +28,54 @@ interface Props {
     onUpdateTextLabels: (labels: TextLabel[]) => void;
     onSelectText: (id: string | null) => void;
     onTextDoubleClick?: (id: string) => void;
+    cropLeft?: number;
+    cropRight?: number;
+    cropTop?: number;
+    cropBottom?: number;
+    hoistPositions?: HoistRegistry;
+    onUpdateHoistPositions?: (positions: HoistRegistry) => void;
+    isPositioningMode?: boolean;
+    onUpdateTopLimitY?: (y: number) => void;
+    className?: string;
 }
 
 // Natural image dimensions from the file
-const IMG_WIDTH = 1264;
-const IMG_HEIGHT = 649;
+const IMG_WIDTH = 1125;
+const IMG_HEIGHT = 789;
+const DESIGN_VIEWPORT_X = 0;
+const DESIGN_VIEWPORT_Y = 0;
+const DESIGN_VIEWPORT_W = 1125;
+const DESIGN_VIEWPORT_H = 778;
+
+export const PRINT_VIEWPORT_X = 0;
+export const PRINT_VIEWPORT_Y = 5;
+export const PRINT_VIEWPORT_W = 1125;
+export const PRINT_VIEWPORT_H = 778;
 
 /**
- * PIXEL-PERFECT COORDINATES
- * Extracted directly from the blueprint image centers.
- * Horizontal row at Y = 38.16
+ * TABULKA POZIC TAHŮ
+ * Souřadnice X jsou nyní nastaveny pro pravou část obrázku (samotná scéna).
  */
-const HOIST_HOOK_CENTERS: Record<number, { x: number }> = {
-    1: { x: 834.79 },
-    2: { x: 848.79 },
-    3: { x: 862.79 },
-    5: { x: 899.79 },
-    6: { x: 913.79 },
-    7: { x: 928.79 },
-    8: { x: 942.79 },
-    9: { x: 956.79 },
-    10: { x: 970.79 },
-    12: { x: 1003.79 },
-    13: { x: 1017.79 },
-    14: { x: 1031.79 },
-    15: { x: 1069.79 },
-    17: { x: 1096.79 },
-    18: { x: 1110.79 }
+// HOIST_HOOK_CENTERS removed in favor of props
+const DEFAULT_HOIST_POSITIONS_FALLBACK: Record<number, { x: number }> = {
+    1: { x: 699.2 },
+    2: { x: 729.2 },
+    3: { x: 759.2 },
+    4: { x: 789.2 },
+    5: { x: 819.2 },
+    6: { x: 849.2 },
+    7: { x: 879.2 },
+    8: { x: 909.2 },
+    9: { x: 939.2 },
+    10: { x: 969.2 },
+    11: { x: 999.2 },
+    12: { x: 1029.2 },
+    13: { x: 1059.2 },
+    14: { x: 1089.2 },
+    15: { x: 1119.2 },
+    16: { x: 1149.2 },
+    17: { x: 1179.2 },
+    18: { x: 1209.2 }
 };
 
 // Wire starts exactly from the hook center
@@ -84,7 +105,15 @@ const StageCanvas: React.FC<Props> = ({
     selectedTextId,
     onUpdateTextLabels,
     onSelectText,
-    onTextDoubleClick
+    onTextDoubleClick,
+    cropLeft = DESIGN_VIEWPORT_X,
+    cropRight = IMG_WIDTH - DESIGN_VIEWPORT_X - DESIGN_VIEWPORT_W,
+    cropTop = DESIGN_VIEWPORT_Y,
+    cropBottom = IMG_HEIGHT - DESIGN_VIEWPORT_Y - DESIGN_VIEWPORT_H,
+    hoistPositions,
+    onUpdateHoistPositions,
+    isPositioningMode = false,
+    onUpdateTopLimitY
 }: Props) => {
     const {
         stageHeightCm = 900,
@@ -111,6 +140,10 @@ const StageCanvas: React.FC<Props> = ({
     const [draggingTextId, setDraggingTextId] = React.useState<string | null>(null);
     const [resizingTextId, setResizingTextId] = React.useState<string | null>(null);
     const [textDragOffset, setTextDragOffset] = React.useState<Point>({ x: 0, y: 0 });
+
+    // Positioning Mode State
+    const [dragPositionId, setDragPositionId] = React.useState<number | null>(null); // ID of hoist being positioned (or -1 for global Y)
+    const [isDraggingTopLimit, setIsDraggingTopLimit] = React.useState(false);
 
     // Clear pending line if tool changes or drawing is disabled
     React.useEffect(() => {
@@ -227,6 +260,35 @@ const StageCanvas: React.FC<Props> = ({
             pod: newPod,
             isTopLimit: newPod >= maxPod - 1
         });
+        onUpdateTah(draggingId, {
+            pod: newPod,
+            isTopLimit: newPod >= maxPod - 1
+        });
+    };
+
+    // New Handler for Positioning Mode
+    React.useEffect(() => {
+        if (!isPositioningMode && (dragPositionId !== null || isDraggingTopLimit)) {
+            setDragPositionId(null);
+            setIsDraggingTopLimit(false);
+        }
+    }, [isPositioningMode]);
+
+    const handlePositioningMouseMove = (currentPos: Point) => {
+        if (dragPositionId !== null && onUpdateHoistPositions && hoistPositions) {
+            // Dragging X for specific hoist
+            const newX = currentPos.x;
+            onUpdateHoistPositions({
+                ...hoistPositions,
+                [dragPositionId]: { x: newX }
+            });
+        }
+
+        if (isDraggingTopLimit && onUpdateTopLimitY) {
+            // Dragging Y for all hoists (changing topLimitY)
+            const newY = currentPos.y;
+            onUpdateTopLimitY(newY);
+        }
     };
 
     const handleMouseUp = () => {
@@ -238,6 +300,8 @@ const StageCanvas: React.FC<Props> = ({
         setDraggingTextId(null);
         setResizingTextId(null);
         setDragOffset(0);
+        setDragPositionId(null);
+        setIsDraggingTopLimit(false);
     };
 
     const handleTextClick = (e: React.MouseEvent) => {
@@ -310,33 +374,50 @@ const StageCanvas: React.FC<Props> = ({
 
     return (
         <div
-            className="relative bg-white shadow-2xl select-none overflow-hidden"
+            className="relative bg-white shadow-2xl select-none"
             style={{
-                width: IMG_WIDTH - 50,
-                height: IMG_HEIGHT,
-                maxWidth: '100%',
-                maxHeight: 'calc(100vh - 200px)',
-                aspectRatio: `${IMG_WIDTH - 50} / ${IMG_HEIGHT}`
+                width: IMG_WIDTH - cropLeft - cropRight,
+                height: IMG_HEIGHT - cropTop - cropBottom,
             }}
         >
+            <div className="absolute inset-0 bg-white z-0" style={{
+                backgroundImage: 'radial-gradient(#ddd 1px, transparent 1px)',
+                backgroundSize: '20px 20px'
+            }} />
+
             <img
                 src={stageBgImage}
                 alt="Stage Blueprint"
                 className="absolute opacity-95 pointer-events-none z-0"
                 style={{
-                    left: '-4.12%',
-                    top: 0,
-                    width: '104.12%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'left center'
+                    left: `${-cropLeft}px`,
+                    top: `${-cropTop}px`,
+                    width: `${IMG_WIDTH}px`,
+                    height: `${IMG_HEIGHT}px`,
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    objectFit: 'none'
                 }}
             />
 
             <svg
                 className={`absolute inset-0 w-full h-full ${(isDrawingEnabled && drawTool !== 'line' && drawTool !== 'select' && drawTool !== 'text') ? 'pointer-events-none z-0' : 'pointer-events-auto z-20'}`}
-                viewBox={`50 0 ${IMG_WIDTH - 50} ${IMG_HEIGHT}`}
-                onMouseMove={handleMouseMove}
+                viewBox={`${cropLeft} ${cropTop} ${IMG_WIDTH - cropLeft - cropRight} ${IMG_HEIGHT - cropTop - cropBottom}`}
+                preserveAspectRatio="xMinYMin meet"
+                onMouseMove={(e) => {
+                    if (isPositioningMode) {
+                        const svg = e.currentTarget as SVGSVGElement;
+                        const ctm = svg.getScreenCTM();
+                        if (ctm) {
+                            const pt = svg.createSVGPoint();
+                            pt.x = e.clientX;
+                            pt.y = e.clientY;
+                            const svgP = pt.matrixTransform(ctm.inverse());
+                            handlePositioningMouseMove({ x: svgP.x, y: svgP.y });
+                        }
+                    }
+                    handleMouseMove(e);
+                }}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
                 onMouseDown={(e) => {
@@ -364,7 +445,7 @@ const StageCanvas: React.FC<Props> = ({
             >
                 {TAH_IDS.map(id => {
                     const tah = safeTahy[id];
-                    const hookX = HOIST_HOOK_CENTERS[id]?.x || 0;
+                    const hookX = hoistPositions?.[id]?.x ?? DEFAULT_HOIST_POSITIONS_FALLBACK[id]?.x ?? 0;
                     const x = hookX;
 
                     const zeroY = ZERO_Y;
@@ -617,6 +698,75 @@ const StageCanvas: React.FC<Props> = ({
                                 )}
                             </AnimatePresence>
 
+                            {/* Manual Positioning Drag Handles - Only visible in Positioning Mode */}
+                            {isPositioningMode && (
+                                <g>
+                                    {/* X-Axis Drag Handle (Orange) */}
+                                    <circle
+                                        cx={x}
+                                        cy={HOIST_TOP_Y}
+                                        r={12}
+                                        fill="rgba(245, 158, 11, 0.4)"
+                                        stroke="#f59e0b"
+                                        strokeWidth={2}
+                                        cursor="ew-resize"
+                                        onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            setDragPositionId(id);
+                                        }}
+                                        className="hover:fill-amber-500/60 transition-colors"
+                                    />
+                                    {/* Vertical guide line for X alignment */}
+                                    <line
+                                        x1={x} y1={0} x2={x} y2={IMG_HEIGHT}
+                                        stroke="#f59e0b"
+                                        strokeWidth={1}
+                                        strokeDasharray="4 4"
+                                        opacity={0.5}
+                                        pointerEvents="none"
+                                    />
+
+                                    {/* Y-Axis (Top Limit) Drag Handle - Only on First Hoist for global control? Or maybe a separate handle line.
+                                        User said "height will be the same according to the first one".
+                                        Let's put a special handle on the first hoist for Y adjustment. */}
+                                    {id === 1 && (
+                                        <g>
+                                            <rect
+                                                x={x - 20}
+                                                y={HOIST_TOP_Y - 10}
+                                                width={40}
+                                                height={20}
+                                                fill="rgba(59, 130, 246, 0.3)"
+                                                stroke="#3b82f6"
+                                                strokeWidth={2}
+                                                cursor="ns-resize"
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsDraggingTopLimit(true);
+                                                }}
+                                                className="hover:fill-blue-500/50 transition-colors"
+                                            />
+                                            {/* Global Horizontal line guide */}
+                                            <line
+                                                x1={0} y1={HOIST_TOP_Y} x2={IMG_WIDTH} y2={HOIST_TOP_Y}
+                                                stroke="#3b82f6"
+                                                strokeWidth={1}
+                                                strokeDasharray="4 4"
+                                                opacity={0.5}
+                                                pointerEvents="none"
+                                            />
+                                            <text x={x + 25} y={HOIST_TOP_Y + 4} fontSize="10" fill="#3b82f6" fontWeight="bold">Y: {HOIST_TOP_Y.toFixed(1)}px</text>
+                                        </g>
+                                    )}
+
+                                    {/* X Coord Label */}
+                                    <text x={x} y={HOIST_TOP_Y - 20} textAnchor="middle" fontSize="9" fill="#f59e0b" fontWeight="bold" pointerEvents="none">
+                                        X: {x.toFixed(1)}
+                                    </text>
+                                </g>
+                            )}
+
+
                             {/* Horní úvrať */}
                             {tah.isTopLimit && (
                                 <line
@@ -637,15 +787,7 @@ const StageCanvas: React.FC<Props> = ({
                                 />
                             )}
 
-                            {/* ID popisek - ukotven k pevné kladce (y: 43) */}
-                            <line
-                                x1={x}
-                                y1={topLimitY}
-                                x2={x}
-                                y2={hookY}
-                                stroke={isSelected ? "#3b82f6" : "#666"}
-                                strokeWidth={isSelected ? 2 : 1.2}
-                            />
+                            {/* ID popisek - ukotven k pevné kladce */}
                             <rect
                                 x={id < 10 ? x - 7 : x - 9}
                                 y={HOIST_TOP_Y - 37}
@@ -767,107 +909,126 @@ const StageCanvas: React.FC<Props> = ({
                             </g>
                         );
                     })}
+                </g>
 
-                    {/* Text Labels Layer */}
-                    <g id="text-labels">
-                        {textLabels.map(label => {
-                            const isSelected = selectedTextId === label.id;
-                            const wrapWidth = label.width || label.text.length * (label.fontSize * 0.6) + 20;
+                {/* DEBUG: Coordinate Grid */}
+                <g pointerEvents="none" opacity="0.5">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                        <g key={`grid-x-${i}`}>
+                            <line x1={i * 100} y1="0" x2={i * 100} y2={IMG_HEIGHT} stroke="#ddd" strokeWidth="1" />
+                            <text x={i * 100 + 2} y="10" fontSize="8" fill="#aaa">{i * 100}</text>
+                        </g>
+                    ))}
+                    {Array.from({ length: 15 }).map((_, i) => (
+                        <g key={`grid-y-${i}`}>
+                            <line x1="0" y1={i * 100} x2={IMG_WIDTH} y2={i * 100} stroke="#ddd" strokeWidth="1" />
+                            <text x="2" y={i * 100 - 2} fontSize="8" fill="#aaa">{i * 100}</text>
+                        </g>
+                    ))}
 
-                            return (
-                                <g
-                                    key={label.id}
-                                    className={showVectorHandles ? "group cursor-move" : "pointer-events-none"}
+                </g>
+
+                {/* Text Labels Layer */}
+                <g id="text-labels">
+                    {textLabels.map(label => {
+                        const isSelected = selectedTextId === label.id;
+                        const wrapWidth = label.width || label.text.length * (label.fontSize * 0.6) + 20;
+
+                        return (
+                            <g
+                                key={label.id}
+                                className={showVectorHandles ? "group cursor-move" : "pointer-events-none"}
+                            >
+                                <foreignObject
+                                    x={label.pos.x}
+                                    y={label.pos.y - label.fontSize}
+                                    width={wrapWidth}
+                                    height={500}
+                                    style={{ overflow: 'visible' }}
+                                    onMouseDown={(e) => {
+                                        if (showVectorHandles) {
+                                            e.stopPropagation();
+                                            onSelectText(label.id);
+                                            onSelectVector(null);
+                                            onSelectTah(-1);
+
+                                            const svg = (e.currentTarget as SVGElement).ownerSVGElement;
+                                            if (svg) {
+                                                const pt = svg.createSVGPoint();
+                                                pt.x = e.clientX;
+                                                pt.y = e.clientY;
+                                                const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+                                                setDraggingTextId(label.id);
+                                                setTextDragOffset({
+                                                    x: svgP.x - label.pos.x,
+                                                    y: svgP.y - label.pos.y
+                                                });
+                                            }
+                                        }
+                                    }}
+                                    onDoubleClick={(e) => {
+                                        if (showVectorHandles) {
+                                            e.stopPropagation();
+                                            onTextDoubleClick?.(label.id);
+                                        }
+                                    }}
                                 >
-                                    <foreignObject
-                                        x={label.pos.x}
-                                        y={label.pos.y - label.fontSize}
-                                        width={wrapWidth}
-                                        height={500}
-                                        style={{ overflow: 'visible' }}
-                                        onMouseDown={(e) => {
-                                            if (showVectorHandles) {
-                                                e.stopPropagation();
-                                                onSelectText(label.id);
-                                                onSelectVector(null);
-                                                onSelectTah(-1);
-
-                                                const svg = (e.currentTarget as SVGElement).ownerSVGElement;
-                                                if (svg) {
-                                                    const pt = svg.createSVGPoint();
-                                                    pt.x = e.clientX;
-                                                    pt.y = e.clientY;
-                                                    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-                                                    setDraggingTextId(label.id);
-                                                    setTextDragOffset({
-                                                        x: svgP.x - label.pos.x,
-                                                        y: svgP.y - label.pos.y
-                                                    });
-                                                }
-                                            }
-                                        }}
-                                        onDoubleClick={(e) => {
-                                            if (showVectorHandles) {
-                                                e.stopPropagation();
-                                                onTextDoubleClick?.(label.id);
-                                            }
+                                    <div
+                                        style={{
+                                            color: label.color,
+                                            fontSize: `${label.fontSize}px`,
+                                            fontWeight: 'bold',
+                                            padding: label.backgroundColor ? '4px 8px' : '0',
+                                            display: 'inline-block',
+                                            width: label.width ? '100%' : 'auto',
+                                            wordWrap: 'break-word',
+                                            whiteSpace: 'pre-wrap',
+                                            userSelect: 'none',
+                                            outline: isSelected ? '1.5px dashed #3b82f6' : 'none',
+                                            outlineOffset: '4px',
+                                            position: 'relative',
+                                            borderRadius: '4px'
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                color: label.color,
-                                                fontSize: `${label.fontSize}px`,
-                                                fontWeight: 'bold',
-                                                padding: label.backgroundColor ? '4px 8px' : '0',
-                                                display: 'inline-block',
-                                                width: label.width ? '100%' : 'auto',
-                                                wordWrap: 'break-word',
-                                                whiteSpace: 'pre-wrap',
-                                                userSelect: 'none',
-                                                outline: isSelected ? '1.5px dashed #3b82f6' : 'none',
-                                                outlineOffset: '4px',
-                                                position: 'relative',
-                                                borderRadius: '4px'
-                                            }}
-                                        >
-                                            {label.backgroundColor && (
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        backgroundColor: label.backgroundColor.length === 9 ? label.backgroundColor.substring(0, 7) : label.backgroundColor,
-                                                        opacity: label.backgroundOpacity ?? 0.3,
-                                                        borderRadius: '4px',
-                                                        zIndex: -1
-                                                    }}
-                                                />
-                                            )}
-                                            {label.text}
-                                        </div>
-                                    </foreignObject>
+                                        {label.backgroundColor && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    backgroundColor: label.backgroundColor.length === 9 ? label.backgroundColor.substring(0, 7) : label.backgroundColor,
+                                                    opacity: label.backgroundOpacity ?? 0.3,
+                                                    borderRadius: '4px',
+                                                    zIndex: -1
+                                                }}
+                                            />
+                                        )}
+                                        <div dangerouslySetInnerHTML={{ __html: label.text }} />
+                                    </div>
+                                </foreignObject>
 
-                                    {/* Resize handle */}
-                                    {isSelected && showVectorHandles && (
-                                        <rect
-                                            x={label.pos.x + wrapWidth - 5}
-                                            y={label.pos.y - label.fontSize}
-                                            width={10}
-                                            height={20}
-                                            fill="#3b82f6"
-                                            className="cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                setResizingTextId(label.id);
-                                            }}
-                                        />
-                                    )}
-                                </g>
-                            );
-                        })}
-                    </g>
+                                {/* Resize handle */}
+                                {isSelected && showVectorHandles && (
+                                    <rect
+                                        x={label.pos.x + wrapWidth - 5}
+                                        y={label.pos.y - label.fontSize}
+                                        width={10}
+                                        height={20}
+                                        fill="#3b82f6"
+                                        className="cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            setResizingTextId(label.id);
+                                        }}
+                                    />
+                                )}
+                            </g>
+                        );
+                    })}
+                </g>
 
-                    {/* Drawing Preview */}
-                    {pendingLine && (
+                {/* Drawing Preview */}
+                {
+                    pendingLine && (
                         <g>
                             <line
                                 x1={pendingLine.x}
@@ -881,24 +1042,24 @@ const StageCanvas: React.FC<Props> = ({
                             />
                             <circle cx={pendingLine.x} cy={pendingLine.y} r={4} fill={drawingColor} />
                         </g>
-                    )}
-                </g>
+                    )
+                }
             </svg>
 
             <DrawingLayer
-                width={IMG_WIDTH - 50}
-                height={IMG_HEIGHT}
+                width={IMG_WIDTH - cropLeft - cropRight}
+                height={IMG_HEIGHT - cropTop - cropBottom}
                 color={drawingColor}
                 tool={drawTool}
                 enabled={isDrawingEnabled}
             />
 
             {/* Zobrazení nuly (Podlahy) */}
-            <div className="absolute left-0 w-full h-[1px] bg-blue-500/20 pointer-events-none" style={{ top: ZERO_Y }} />
+            <div className="absolute left-0 w-full h-[1px] bg-blue-500/20 pointer-events-none" style={{ top: ZERO_Y - cropTop }} />
 
             {/* Zobrazení Minimální výšky (Červená ryska) */}
             <div className="absolute left-0 w-full h-[1px] bg-red-600/30 pointer-events-none border-t border-dashed border-red-600/50"
-                style={{ top: zeroLevelY - minHeightCm * scaleConfig }} />
+                style={{ top: (zeroLevelY - minHeightCm * scaleConfig) - cropTop }} />
 
             {/* Spotlight efekt při nastavování pixelů */}
             <AnimatePresence>
@@ -912,22 +1073,22 @@ const StageCanvas: React.FC<Props> = ({
                             backgroundColor: 'rgba(0,0,0,0.6)',
                             maskImage: `linear-gradient(to bottom, 
                                 black 0%, 
-                                black ${highlightY - 120}px, 
-                                transparent ${highlightY - 100}px, 
-                                transparent ${highlightY + 100}px, 
-                                black ${highlightY + 120}px, 
+                                black ${highlightY - cropTop - 120}px, 
+                                transparent ${highlightY - cropTop - 100}px, 
+                                transparent ${highlightY - cropTop + 100}px, 
+                                black ${highlightY - cropTop + 120}px, 
                                 black 100%)`,
                             WebkitMaskImage: `linear-gradient(to bottom, 
                                 black 0%, 
-                                black ${highlightY - 120}px, 
-                                transparent ${highlightY - 100}px, 
-                                transparent ${highlightY + 100}px, 
-                                black ${highlightY + 120}px, 
+                                black ${highlightY - cropTop - 120}px, 
+                                transparent ${highlightY - cropTop - 100}px, 
+                                transparent ${highlightY - cropTop + 100}px, 
+                                black ${highlightY - cropTop + 120}px, 
                                 black 100%)`
                         }}
                     >
                         <div className="absolute left-0 w-full h-[200px] border-y border-white/20 bg-white/5"
-                            style={{ top: highlightY - 100 }} />
+                            style={{ top: highlightY - cropTop - 100 }} />
                     </motion.div>
                 )}
             </AnimatePresence>
