@@ -297,15 +297,9 @@ const App: React.FC = () => {
             const isNonDefaultPosition = tah.pod !== 0 || tah.isHanging;
 
             if (hasDecoration || isNonDefaultPosition) {
-                // Formát: [Název] TAH výška (dekorace) úvazek
+                // Formát: TAH výška (dekorace) úvazek [Název]
                 const totalHeight = tah.pod + tah.dek + tah.uva;
-                let line = ``;
-
-                if (tah.name) {
-                    line += `<span style="color: #60a5fa; font-weight: bold;">${tah.name}</span> - `;
-                }
-
-                line += `${id}  ${totalHeight}cm`;
+                let line = `${id}  ${totalHeight}cm`;
 
                 if (tah.dek > 0) {
                     line += ` (${tah.dek}cm)`;
@@ -313,6 +307,10 @@ const App: React.FC = () => {
 
                 if (tah.uva > 0) {
                     line += ` <span style="color: red; font-weight: bold;">${tah.uva}cm</span>`;
+                }
+
+                if (tah.name) {
+                    line += ` - <span style="color: #60a5fa; font-weight: bold;">${tah.name}</span>`;
                 }
 
                 usedHoists.push(line);
