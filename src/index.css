@@ -59,13 +59,20 @@
 
   .print-page {
     page-break-after: always;
-    width: 100%;
-    height: 100%;
+    width: 297mm; /* Full A4 landscape width */
+    height: 210mm; /* Full A4 landscape height */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     background: white !important;
+    position: relative;
+  }
+
+  /* Scale the canvas container to fit if it's too large */
+  .print-page > div {
+    transform: scale(0.95);
+    transform-origin: center center;
   }
 
   /* Remove shadows and extra styling for print */

@@ -38,7 +38,9 @@ import {
     Upload,
     Type,
     Printer,
-    TriangleAlert
+    TriangleAlert,
+    ClipboardList,
+    FileText
 } from 'lucide-react';
 import defaultSet from '../public/assets/default_set.json';
 
@@ -54,7 +56,9 @@ const App: React.FC = () => {
                 pod: DEFAULT_STAGE_CONFIG.stageHeightCm,
                 isHanging: false,
                 isTopLimit: false,
-                isBottomLimit: false
+                isBottomLimit: false,
+                nosnost: 80, // Výchozí nosnost 80kg
+                funkce: 'kulisy'
             };
         });
         return initial;
@@ -128,8 +132,42 @@ const App: React.FC = () => {
     }, [hoistPositions]);
 
     const [isPositioningMode, setIsPositioningMode] = useState(false);
+    const [previousSceneId, setPreviousSceneId] = useState<string | null>(null);
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [isHoistConfigMode, setIsHoistConfigMode] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [focusedPixelValue, setFocusedPixelValue] = useState<number | null>(null);
+
+    // Virtuální Scéna 0 pro režim pozicování (vše nulové)
+    const SCENE_ZERO: Scene = React.useMemo(() => {
+        // Technické parametry bereme z první scény, abychom je v S0 viděli a mohli měnit
+        const techSource = scenes[0]?.tahy;
+        return {
+            id: "0",
+            name: "Scéna 0 (Prázdná)",
+            tahy: TAH_IDS.reduce((acc, id) => {
+                const isLight = techSource?.[id]?.funkce === 'světla';
+                acc[id] = {
+                    id,
+                    dek: 0,
+                    uva: 0,
+                    pod: isLight ? (techSource?.[id]?.pod ?? 0) : 0,
+                    isHanging: isLight ? true : false,
+                    isTopLimit: false,
+                    isBottomLimit: false,
+                    nosnost: techSource?.[id]?.nosnost ?? 80,
+                    funkce: techSource?.[id]?.funkce ?? 'kulisy'
+                };
+                return acc;
+            }, {} as Record<number, TahState>),
+            vectorLines: [],
+            textLabels: []
+        };
+    }, [scenes]);
+
+    const displayScenes = React.useMemo(() =>
+        isPositioningMode ? [SCENE_ZERO, ...scenes] : scenes
+        , [isPositioningMode, scenes, SCENE_ZERO]);
 
     // Save scenes to localStorage whenever they change
     useEffect(() => {
@@ -148,16 +186,38 @@ const App: React.FC = () => {
 
     // Initialize state from the active scene when component mounts or scenes change
     useEffect(() => {
-        const activeScene = scenes.find(s => s.id === activeSceneId);
+        const activeScene = displayScenes.find(s => s.id === activeSceneId);
         if (activeScene) {
             setTahy(activeScene.tahy);
             setVectorLines(activeScene.vectorLines || []);
             setTextLabels(activeScene.textLabels || []);
         }
-    }, [activeSceneId, scenes]);
+    }, [activeSceneId, displayScenes]);
 
     // Sync current state to active scene in scenes array
     const syncCurrentStateToScenes = useCallback((newTahy?: Record<number, TahState>, newVectors?: VectorLine[], newLabels?: TextLabel[]) => {
+        if (activeSceneId === "0") {
+            // Propagace technických parametrů do všech scén
+            if (newTahy) {
+                setScenes(prevScenes => prevScenes.map(s => ({
+                    ...s,
+                    tahy: Object.keys(s.tahy).reduce((acc, idStr) => {
+                        const id = Number(idStr);
+                        const isLight = newTahy[id].funkce === 'světla';
+                        acc[id] = {
+                            ...s.tahy[id],
+                            nosnost: newTahy[id].nosnost,
+                            funkce: newTahy[id].funkce,
+                            // Pozici od země u světel považujeme za technický parametr (rigging)
+                            pod: isLight ? newTahy[id].pod : s.tahy[id].pod,
+                            isHanging: isLight ? true : s.tahy[id].isHanging
+                        };
+                        return acc;
+                    }, {} as Record<number, TahState>)
+                })));
+            }
+            return;
+        }
         setScenes(prevScenes => prevScenes.map(s => {
             if (s.id === activeSceneId) {
                 return {
@@ -245,15 +305,22 @@ const App: React.FC = () => {
         if (isPositioningMode) {
             // Exit mode
             setIsPositioningMode(false);
+            setZoomLevel(1); // Reset zoom when exiting
+            if (previousSceneId) {
+                setActiveSceneId(previousSceneId);
+            }
             addLog('Ukončeno ruční pozicování tahů - Pozice uloženy');
         } else {
             // Enter mode
+            setPreviousSceneId(activeSceneId);
             setIsPositioningMode(true);
+            setActiveSceneId("0");
+            setIsSettingsOpen(false); // Close settings modal when starting
             setSelectedTahId(-1); // Deselect everything
             setSelectedTextId(null);
             setSelectedVectorId(null);
             setIsSidebarOpen(true); // Ensure sidebar is open to show the toggle button
-            addLog('Spuštěno ruční pozicování tahů');
+            addLog('Spuštěno ruční pozicování tahů - Aktivní Scéna 0');
         }
     };
 
@@ -307,15 +374,18 @@ const App: React.FC = () => {
     };
 
     const switchScene = (sceneId: string) => {
-        const scene = scenes.find(s => s.id === sceneId);
+        const scene = displayScenes.find(s => s.id === sceneId);
         if (scene) {
             setActiveSceneId(sceneId);
             setTahy(scene.tahy);
+            if (scene.vectorLines) setVectorLines(scene.vectorLines);
+            if (scene.textLabels) setTextLabels(scene.textLabels);
             addLog(`Přepnuto na scénu: ${scene.name}`);
         }
     };
 
     const handleSceneNameChange = (id: string, newName: string) => {
+        if (id === "0") return; // Scéna 0 se nepřejmenovává
         setScenes(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s));
     };
 
@@ -427,11 +497,11 @@ const App: React.FC = () => {
             backgroundOpacity: 0.9
         };
 
-        // Přidej textové pole pro název inscenace do levého horního rohu (x: 50, y: 50)
+        // Přidej textové pole pro název inscenace a scény do levého horního rohu (x: 50, y: 50)
         const productionLabel: TextLabel = {
             id: `production-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             pos: { x: 50, y: 50 },
-            text: `<span style="font-weight: 900; font-size: 24px;">${productionName}</span>`,
+            text: `<span style="font-weight: 900; font-size: 24px;">${productionName}</span> <span style="font-weight: 700; font-size: 20px; color: #000;">- ${activeScene.name}</span>`,
             color: '#000000',
             fontSize: 24,
             backgroundColor: '#ffffff',
@@ -449,19 +519,14 @@ const App: React.FC = () => {
 
 
     const updateTah = useCallback((id: number, updatesOrFn: Partial<TahState> | ((prev: TahState) => Partial<TahState>)) => {
-        setTahy(prev => {
-            const currentTah = prev[id];
-            const updates = typeof updatesOrFn === 'function' ? updatesOrFn(currentTah) : updatesOrFn;
-            const newTahy = {
-                ...prev,
-                [id]: { ...currentTah, ...updates }
-            };
+        const currentTah = tahy[id];
+        const updates = typeof updatesOrFn === 'function' ? updatesOrFn(currentTah) : updatesOrFn;
+        const newTah = { ...currentTah, ...updates };
+        const nextTahy = { ...tahy, [id]: newTah };
 
-            syncCurrentStateToScenes(newTahy);
-
-            return newTahy;
-        });
-    }, [syncCurrentStateToScenes]);
+        setTahy(nextTahy);
+        syncCurrentStateToScenes(nextTahy);
+    }, [tahy, syncCurrentStateToScenes]);
 
     const selectedTah = tahy[selectedTahId];
 
@@ -510,6 +575,7 @@ const App: React.FC = () => {
                                 Let's try to blur the rest of the app.*/}
                             <div className="p-8 space-y-8">
                                 <ControlPanel
+                                    tahy={tahy}
                                     selectedId={selectedTahId}
                                     onSelectId={setSelectedTahId}
                                     tah={selectedTah}
@@ -536,11 +602,19 @@ const App: React.FC = () => {
                                         setTahy(reset);
                                         addLog("Všechny tahy byly vymazány");
                                     }}
+                                    onResetToDefault={() => {
+                                        // Reset to SCENE_ZERO logic but keeping current technical params (which are handled by sync, but here we reset active values)
+                                        // Actually SCENE_ZERO is dynamic now. So we can just copy it.
+                                        setTahy(SCENE_ZERO.tahy);
+                                        addLog("Tahy byly nastaveny na výchozí hodnoty");
+                                    }}
                                     onAddLog={addLog}
                                     stageConfig={stageConfig}
                                     onUpdateConfig={setStageConfig}
                                     onTogglePositioningMode={handleTogglePositioningMode}
+                                    onUpdateHoistPositions={setHoistPositions}
                                     isPositioningMode={isPositioningMode}
+                                    hoistPositions={hoistPositions}
                                 />
 
                                 {/* Production and Scene Management Panel - Blurred in positioning mode */}
@@ -575,7 +649,7 @@ const App: React.FC = () => {
                                                     onChange={(e) => switchScene(e.target.value)}
                                                     className="flex-1 h-8 px-3 bg-zinc-900/50 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm appearance-none outline-none focus:border-blue-500/50 transition-all cursor-pointer"
                                                 >
-                                                    {scenes.map(s => (
+                                                    {displayScenes.map(s => (
                                                         <option key={s.id} value={s.id} className="bg-zinc-900">{s.name}</option>
                                                     ))}
                                                 </select>
@@ -584,9 +658,10 @@ const App: React.FC = () => {
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider w-16">Název:</span>
                                                 <input
-                                                    value={scenes.find(s => s.id === activeSceneId)?.name || ''}
+                                                    value={displayScenes.find(s => s.id === activeSceneId)?.name || ''}
                                                     onChange={(e) => handleSceneNameChange(activeSceneId, e.target.value)}
-                                                    className="flex-1 h-8 px-3 bg-zinc-900/50 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:border-blue-500/50 outline-none transition-all placeholder-zinc-600"
+                                                    disabled={activeSceneId === "0"}
+                                                    className={`flex-1 h-8 px-3 bg-zinc-900/50 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:border-blue-500/50 outline-none transition-all placeholder-zinc-600 ${activeSceneId === "0" ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     placeholder="Přejmenovat scénu..."
                                                 />
                                             </div>
@@ -617,7 +692,7 @@ const App: React.FC = () => {
                                                         className="p-1.5 bg-green-700/30 hover:bg-green-700/50 rounded-lg text-green-400 hover:text-green-300 transition-all"
                                                         title="Vytvořit soupis tahů"
                                                     >
-                                                        <Save className="w-3 h-3" />
+                                                        <ClipboardList className="w-6 h-6" />
                                                     </button>
 
                                                     <button
@@ -652,17 +727,17 @@ const App: React.FC = () => {
 
 
                 {/* Visual context info - Blurred when in positioning mode */}
-                <div className={`absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between no-print transition-all duration-500 ${isPositioningMode ? 'opacity-0 blur-md' : ''}`}>
+                <div className="absolute top-0 right-0 left-0 h-32 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent z-30 px-12 pt-8 flex items-start justify-between no-print transition-all duration-500">
                     <div className="flex items-center gap-8">
                         {!isSidebarOpen && (
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
-                                className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl shadow-2xl hover:bg-zinc-800 transition-all active:scale-95 text-blue-400 group z-40 pointer-events-auto"
+                                className={`p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl shadow-2xl transition-all active:scale-95 text-blue-400 group z-40 pointer-events-auto ${isPositioningMode ? 'opacity-0 blur-md' : 'hover:bg-zinc-800'}`}
                             >
                                 <Maximize2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
                             </button>
                         )}
-                        <div className="flex flex-col gap-1 ml-[50px]">
+                        <div className={`flex flex-col gap-1 ml-[50px] transition-all duration-500 ${isPositioningMode ? 'opacity-0 blur-md' : ''}`}>
                             <h2 className="text-3xl font-black tracking-tighter text-white/90 uppercase">
                                 {(() => {
                                     if (selectedTah) return `Scénický Tah ${selectedTahId}`;
@@ -691,20 +766,51 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 z-40 pointer-events-auto" style={{ marginTop: '-7px' }}>
+                    <div className="flex items-start gap-4 z-40 pointer-events-auto" style={{ marginTop: '-7px' }}>
                         <button
                             onClick={() => window.print()}
-                            className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 shadow-2xl"
+                            className={`p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 shadow-2xl transition-all duration-500 ${isPositioningMode ? 'opacity-0 blur-md pointer-events-none' : 'hover:text-white hover:bg-zinc-800 active:scale-95'}`}
                             title="Tisk všech scén"
                         >
                             <Printer className="w-6 h-6" />
                         </button>
-                        <button
-                            onClick={() => setIsSettingsOpen(true)}
-                            className="p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 shadow-2xl"
-                        >
-                            <Settings className="w-6 h-6" />
-                        </button>
+
+                        <div className="flex flex-col gap-3 items-center">
+                            <button
+                                onClick={() => isPositioningMode ? handleTogglePositioningMode() : setIsSettingsOpen(true)}
+                                className={`p-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl transition-all active:scale-95 shadow-2xl ${isPositioningMode
+                                    ? 'text-amber-500 bg-amber-500/10 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+                                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                                    }`}
+                            >
+                                {isPositioningMode ? (
+                                    <TriangleAlert className="w-6 h-6 animate-pulse" />
+                                ) : (
+                                    <Settings className="w-6 h-6" />
+                                )}
+                            </button>
+
+                            {isPositioningMode && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-2xl p-3 shadow-2xl flex flex-col items-center gap-3"
+                                >
+                                    <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 opacity-50">ZOOM</div>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="4"
+                                        step="0.1"
+                                        value={zoomLevel}
+                                        onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+                                        className="h-32 w-1.5 appearance-none bg-zinc-800 rounded-full cursor-pointer accent-amber-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500"
+                                        style={{ WebkitAppearance: 'slider-vertical' }}
+                                    />
+                                    <div className="text-[10px] font-mono font-bold text-zinc-400">{Math.round(zoomLevel * 100)}%</div>
+                                </motion.div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -759,9 +865,16 @@ const App: React.FC = () => {
                             <button
                                 onClick={() => { setDrawTool('text'); setIsDrawingMode(true); }}
                                 className={`p-3 rounded-xl transition-all ${drawTool === 'text' && isDrawingMode ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
-                                title="Textové pole"
+                                title="Textové pole (T)"
                             >
                                 <Type className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={generateSceneSummary}
+                                className="p-3 bg-green-900/40 hover:bg-green-700/60 rounded-xl text-green-400 hover:text-green-300 transition-all active:scale-95"
+                                title="Vytvořit soupis tahů (S)"
+                            >
+                                <ClipboardList className="w-6 h-6" />
                             </button>
                             <button
                                 onClick={() => { setDrawTool('eraser'); setIsDrawingMode(true); }}
@@ -773,7 +886,14 @@ const App: React.FC = () => {
                         </div>
 
                         {/* Main Stage Canvas: Not Blurred, but pass positioning props */}
-                        <div className="relative glass-panel rounded-3xl overflow-hidden shadow-[0_64px_128px_-32px_rgba(0,0,0,0.7)] p-0 bg-[#0a0a0a] border border-zinc-800/50">
+                        <motion.div
+                            className="relative glass-panel rounded-3xl shadow-[0_64px_128px_-32px_rgba(0,0,0,0.7)] p-0 bg-[#0a0a0a] border border-zinc-800/50"
+                            style={{
+                                transformOrigin: `${selectedTahId !== -1 ? (hoistPositions[selectedTahId]?.x ?? 500) : (hoistPositions[1]?.x ?? 500)}px ${stageConfig.topLimitY}px`
+                            }}
+                            animate={{ scale: zoomLevel }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        >
                             <StageCanvas
                                 tahy={tahy}
                                 selectedId={selectedTahId}
@@ -814,7 +934,7 @@ const App: React.FC = () => {
                                 isPositioningMode={isPositioningMode}
                                 onUpdateTopLimitY={(y) => updateStageConfig({ topLimitY: y })}
                             />
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
 
@@ -939,16 +1059,33 @@ const App: React.FC = () => {
                                         </div>
                                     </div>
                                     {/* Manual Positioning Toggle */}
-                                    <button
-                                        onClick={handleTogglePositioningMode}
-                                        className={`w-full py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-[0.1em] ${isPositioningMode
-                                            ? 'bg-amber-500 text-black shadow-[0_0_30px_rgba(245,158,11,0.4)] animate-pulse'
-                                            : 'bg-zinc-800 text-amber-500 hover:bg-zinc-700 hover:text-amber-400'
-                                            }`}
-                                    >
-                                        <TriangleAlert className="w-5 h-5" />
-                                        {isPositioningMode ? 'Ukončit ruční pozicování' : 'Zapnout ruční pozicování tahů'}
-                                    </button>
+                                    <div className="col-span-2 grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={handleTogglePositioningMode}
+                                            className={`py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-[0.1em] w-full ${isPositioningMode
+                                                ? 'bg-amber-500 text-black shadow-[0_0_30px_rgba(245,158,11,0.4)] animate-pulse'
+                                                : 'bg-zinc-800 text-amber-500 hover:bg-zinc-700 hover:text-amber-400'
+                                                }`}
+                                        >
+                                            <TriangleAlert className="w-5 h-5" />
+                                            {isPositioningMode ? 'Stop Parametry' : 'Pozicování a parametry tahů'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsHoistConfigMode(!isHoistConfigMode);
+                                                if (!isHoistConfigMode) {
+                                                    setIsSidebarOpen(false); // Hide sidebar to see the footer list better
+                                                }
+                                            }}
+                                            className={`py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-[0.1em] w-full ${isHoistConfigMode
+                                                ? 'bg-blue-500 text-white shadow-[0_0_30px_rgba(59,130,246,0.4)] animate-pulse'
+                                                : 'bg-zinc-800 text-blue-400 hover:bg-zinc-700 hover:text-blue-300'
+                                                }`}
+                                        >
+                                            <Settings className="w-5 h-5" />
+                                            {isHoistConfigMode ? 'Stop Nosnost' : 'Nosnost'}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <button
@@ -961,329 +1098,397 @@ const App: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </main>
+            </main >
 
             {/* Line Settings Modal */}
             <AnimatePresence>
-                {editingLineId && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setEditingLineId(null)}
-                    >
-                        {(() => {
-                            const isDefault = editingLineId === 'default';
-                            const line = isDefault ? {
-                                id: 'default',
-                                color: brushColor,
-                                lineStyle: defaultLineStyle,
-                                lineWidth: defaultLineWidth
-                            } : vectorLines.find(l => l.id === editingLineId);
+                {
+                    editingLineId && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setEditingLineId(null)}
+                        >
+                            {(() => {
+                                const isDefault = editingLineId === 'default';
+                                const line = isDefault ? {
+                                    id: 'default',
+                                    color: brushColor,
+                                    lineStyle: defaultLineStyle,
+                                    lineWidth: defaultLineWidth
+                                } : vectorLines.find(l => l.id === editingLineId);
 
-                            if (!line) return null;
-                            return (
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                                    className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-blue-500/10 rounded-xl">
-                                                <Settings className="w-6 h-6 text-blue-400" />
+                                if (!line) return null;
+                                return (
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-blue-500/10 rounded-xl">
+                                                    <Settings className="w-6 h-6 text-blue-400" />
+                                                </div>
+                                                <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                                                    {isDefault ? 'Výchozí nastavení linky' : 'Nastavení linky'}
+                                                </h3>
                                             </div>
-                                            <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                                                {isDefault ? 'Výchozí nastavení linky' : 'Nastavení linky'}
-                                            </h3>
+                                            <button
+                                                onClick={() => setEditingLineId(null)}
+                                                className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
+                                            >
+                                                <X className="w-6 h-6" />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => setEditingLineId(null)}
-                                            className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
-                                        >
-                                            <X className="w-6 h-6" />
-                                        </button>
-                                    </div>
 
-                                    <div className="space-y-6">
-                                        {/* Style Selector */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Styl čáry</label>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {(['solid', 'dashed', 'dotted'] as const).map(style => (
-                                                    <button
-                                                        key={style}
-                                                        onClick={() => updateVectorLine(line.id, { lineStyle: style })}
-                                                        className={`py-3 rounded-xl border-2 font-bold text-xs transition-all ${line.lineStyle === style ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                        <div className="space-y-6">
+                                            {/* Style Selector */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Styl čáry</label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {(['solid', 'dashed', 'dotted'] as const).map(style => (
+                                                        <button
+                                                            key={style}
+                                                            onClick={() => updateVectorLine(line.id, { lineStyle: style })}
+                                                            className={`py-3 rounded-xl border-2 font-bold text-xs transition-all ${line.lineStyle === style ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                                        >
+                                                            {style === 'solid' ? 'Plná' : style === 'dashed' ? 'Čárkovaná' : 'Tečkovaná'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Thickness Selector */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Tloušťka ({line.lineWidth || 2}px)</label>
+                                                <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
+                                                    <input
+                                                        type="range"
+                                                        min="1"
+                                                        max="20"
+                                                        value={line.lineWidth || 2}
+                                                        onChange={(e) => updateVectorLine(line.id, { lineWidth: Number(e.target.value) })}
+                                                        className="flex-1 accent-blue-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Color Selector */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva</label>
+                                                <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                                    <input
+                                                        type="color"
+                                                        value={line.color}
+                                                        onChange={(e) => updateVectorLine(line.id, { color: e.target.value })}
+                                                        className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                    />
+                                                    <span className="text-sm font-mono text-zinc-400 uppercase tracking-tighter">{line.color}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Preview */}
+                                            <div className="pt-4 mt-4 border-t border-zinc-800">
+                                                <div className="w-full h-12 bg-black rounded-xl border border-zinc-800 flex items-center justify-center">
+                                                    <div
+                                                        style={{
+                                                            width: '80%',
+                                                            height: line.lineWidth || 2,
+                                                            backgroundColor: line.color,
+                                                            borderRadius: line.lineStyle === 'dotted' ? '100px' : '0'
+                                                        }}
+                                                        className={line.lineStyle === 'dashed' ? 'bg-transparent' : ''}
                                                     >
-                                                        {style === 'solid' ? 'Plná' : style === 'dashed' ? 'Čárkovaná' : 'Tečkovaná'}
-                                                    </button>
-                                                ))}
+                                                        {line.lineStyle === 'dashed' && (
+                                                            <div className="w-full h-full" style={{
+                                                                backgroundImage: `linear-gradient(to right, ${line.color} 50%, transparent 50%)`,
+                                                                backgroundSize: `${(line.lineWidth || 2) * 5}px 100%`
+                                                            }} />
+                                                        )}
+                                                        {line.lineStyle === 'dotted' && (
+                                                            <div className="w-full h-full" style={{
+                                                                backgroundImage: `radial-gradient(circle, ${line.color} 30%, transparent 35%)`,
+                                                                backgroundSize: `${(line.lineWidth || 2) * 3}px 100%`
+                                                            }} />
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Thickness Selector */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Tloušťka ({line.lineWidth || 2}px)</label>
-                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
-                                                <input
-                                                    type="range"
-                                                    min="1"
-                                                    max="20"
-                                                    value={line.lineWidth || 2}
-                                                    onChange={(e) => updateVectorLine(line.id, { lineWidth: Number(e.target.value) })}
-                                                    className="flex-1 accent-blue-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Color Selector */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva</label>
-                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
-                                                <input
-                                                    type="color"
-                                                    value={line.color}
-                                                    onChange={(e) => updateVectorLine(line.id, { color: e.target.value })}
-                                                    className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
-                                                />
-                                                <span className="text-sm font-mono text-zinc-400 uppercase tracking-tighter">{line.color}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Preview */}
-                                        <div className="pt-4 mt-4 border-t border-zinc-800">
-                                            <div className="w-full h-12 bg-black rounded-xl border border-zinc-800 flex items-center justify-center">
-                                                <div
-                                                    style={{
-                                                        width: '80%',
-                                                        height: line.lineWidth || 2,
-                                                        backgroundColor: line.color,
-                                                        borderRadius: line.lineStyle === 'dotted' ? '100px' : '0'
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {!isDefault && (
+                                                <button
+                                                    onClick={() => {
+                                                        setVectorLines(prev => {
+                                                            const next = prev.filter(l => l.id !== line.id);
+                                                            syncCurrentStateToScenes(undefined, next, undefined);
+                                                            return next;
+                                                        });
+                                                        setEditingLineId(null);
+                                                        setSelectedVectorId(null);
                                                     }}
-                                                    className={line.lineStyle === 'dashed' ? 'bg-transparent' : ''}
+                                                    className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
                                                 >
-                                                    {line.lineStyle === 'dashed' && (
-                                                        <div className="w-full h-full" style={{
-                                                            backgroundImage: `linear-gradient(to right, ${line.color} 50%, transparent 50%)`,
-                                                            backgroundSize: `${(line.lineWidth || 2) * 5}px 100%`
-                                                        }} />
-                                                    )}
-                                                    {line.lineStyle === 'dotted' && (
-                                                        <div className="w-full h-full" style={{
-                                                            backgroundImage: `radial-gradient(circle, ${line.color} 30%, transparent 35%)`,
-                                                            backgroundSize: `${(line.lineWidth || 2) * 3}px 100%`
-                                                        }} />
+                                                    Smazat
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setEditingLineId(null);
+                                                    setSelectedVectorId(null);
+                                                }}
+                                                className={`${isDefault ? 'col-span-2' : ''} bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]`}
+                                            >
+                                                Hotovo
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })()}
+                        </motion.div>
+                    )
+                }
+
+                {
+                    editingTextId && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setEditingTextId(null)}
+                        >
+                            {(() => {
+                                const label = textLabels.find(l => l.id === editingTextId);
+                                if (!label) return null;
+                                return (
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-purple-500/10 rounded-xl">
+                                                    <Type className="w-6 h-6 text-purple-400" />
+                                                </div>
+                                                <h3 className="text-xl font-black text-white uppercase tracking-tight">Nastavení textu</h3>
+                                            </div>
+                                            <button
+                                                onClick={() => setEditingTextId(null)}
+                                                className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
+                                            >
+                                                <X className="w-6 h-6" />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            {/* Text Content */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Text</label>
+                                                <textarea
+                                                    autoFocus
+                                                    value={label.text}
+                                                    onChange={(e) => updateTextLabel(label.id, { text: e.target.value })}
+                                                    onFocus={(e) => e.target.setSelectionRange(e.target.value.length, e.target.value.length)}
+                                                    rows={4}
+                                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500/30 outline-none resize-none text-sm leading-relaxed"
+                                                    placeholder="Napište svůj text..."
+                                                />
+                                            </div>
+
+                                            {/* Font Size */}
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Velikost ({label.fontSize}px)</label>
+                                                <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
+                                                    <input
+                                                        type="range"
+                                                        min="8"
+                                                        max="72"
+                                                        value={label.fontSize}
+                                                        onChange={(e) => updateTextLabel(label.id, { fontSize: Number(e.target.value) })}
+                                                        className="flex-1 accent-purple-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Color Selection Group */}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {/* Text Color */}
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva textu</label>
+                                                    <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                                        <input
+                                                            type="color"
+                                                            value={label.color}
+                                                            onChange={(e) => updateTextLabel(label.id, { color: e.target.value })}
+                                                            className="w-8 h-8 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                        />
+                                                        <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase">{label.color}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Background Color & Opacity */}
+                                                <div className="space-y-4">
+                                                    <div className="flex justify-between items-center pl-1">
+                                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pozadí</label>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!label.backgroundColor}
+                                                            onChange={(e) => updateTextLabel(label.id, {
+                                                                backgroundColor: e.target.checked ? '#ffffff' : undefined,
+                                                                backgroundOpacity: e.target.checked ? 0.4 : undefined
+                                                            })}
+                                                            className="w-4 h-4 accent-purple-500 rounded border-zinc-700 bg-zinc-800"
+                                                        />
+                                                    </div>
+
+                                                    {label.backgroundColor && (
+                                                        <div className="space-y-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl">
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    type="color"
+                                                                    value={label.backgroundColor.substring(0, 7)}
+                                                                    onChange={(e) => updateTextLabel(label.id, { backgroundColor: e.target.value })}
+                                                                    className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                                />
+                                                                <div className="flex-1 space-y-1">
+                                                                    <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                                                                        <span>Průhlednost</span>
+                                                                        <span>{Math.round((label.backgroundOpacity ?? 0.3) * 100)}%</span>
+                                                                    </div>
+                                                                    <input
+                                                                        type="range"
+                                                                        min="0"
+                                                                        max="1"
+                                                                        step="0.05"
+                                                                        value={label.backgroundOpacity ?? 0.3}
+                                                                        onChange={(e) => updateTextLabel(label.id, { backgroundOpacity: parseFloat(e.target.value) })}
+                                                                        className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {!isDefault && (
+                                        <div className="grid grid-cols-2 gap-4 pt-4">
                                             <button
-                                                onClick={() => {
-                                                    setVectorLines(prev => {
-                                                        const next = prev.filter(l => l.id !== line.id);
-                                                        syncCurrentStateToScenes(undefined, next, undefined);
-                                                        return next;
-                                                    });
-                                                    setEditingLineId(null);
-                                                    setSelectedVectorId(null);
-                                                }}
+                                                onClick={() => removeTextLabel(label.id)}
                                                 className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
                                             >
                                                 Smazat
                                             </button>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                setEditingLineId(null);
-                                                setSelectedVectorId(null);
-                                            }}
-                                            className={`${isDefault ? 'col-span-2' : ''} bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]`}
-                                        >
-                                            Hotovo
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            );
-                        })()}
-                    </motion.div>
-                )}
-
-                {editingTextId && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setEditingTextId(null)}
-                    >
-                        {(() => {
-                            const label = textLabels.find(l => l.id === editingTextId);
-                            if (!label) return null;
-                            return (
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                                    className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl p-10 space-y-8"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-purple-500/10 rounded-xl">
-                                                <Type className="w-6 h-6 text-purple-400" />
-                                            </div>
-                                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Nastavení textu</h3>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingTextId(null);
+                                                    setSelectedTextId(null);
+                                                }}
+                                                className="bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
+                                            >
+                                                Hotovo
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => setEditingTextId(null)}
-                                            className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
-                                        >
-                                            <X className="w-6 h-6" />
-                                        </button>
-                                    </div>
+                                    </motion.div>
+                                );
+                            })()}
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
 
-                                    <div className="space-y-6">
-                                        {/* Text Content */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Text</label>
-                                            <textarea
-                                                autoFocus
-                                                value={label.text}
-                                                onChange={(e) => updateTextLabel(label.id, { text: e.target.value })}
-                                                onFocus={(e) => e.target.setSelectionRange(e.target.value.length, e.target.value.length)}
-                                                rows={4}
-                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500/30 outline-none resize-none text-sm leading-relaxed"
-                                                placeholder="Napište svůj text..."
-                                            />
-                                        </div>
+            {!isSidebarOpen && (
+                <div className="min-h-20 h-auto glass-panel border-t border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl flex flex-col p-8 gap-6 no-print w-full">
+                    <div className="flex items-center justify-between w-full border-b border-zinc-800 pb-4">
+                        <div className="flex flex-col gap-1">
+                            <div className="text-xl font-black text-zinc-100 uppercase tracking-tighter">Soupis a stav všech tahů</div>
+                            <div className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Technické parametry a aktuální zatížení</div>
+                        </div>
+                        <div className="flex flex-col items-end leading-none">
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Měřítko scény</span>
+                            <span className="text-zinc-200 font-mono font-bold">1 cm = {stageConfig.scale.toFixed(3)} px</span>
+                        </div>
+                    </div>
 
-                                        {/* Font Size */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Velikost ({label.fontSize}px)</label>
-                                            <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2">
-                                                <input
-                                                    type="range"
-                                                    min="8"
-                                                    max="72"
-                                                    value={label.fontSize}
-                                                    onChange={(e) => updateTextLabel(label.id, { fontSize: Number(e.target.value) })}
-                                                    className="flex-1 accent-purple-500 h-1.5 rounded-lg appearance-none bg-zinc-800 cursor-pointer"
-                                                />
-                                            </div>
-                                        </div>
+                    <div className="w-full overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-zinc-800">
+                                    <th className="pb-3 pl-2">Tah č.</th>
+                                    <th className="pb-3 text-amber-500">Nosnost</th>
+                                    <th className="pb-3">Celková výška</th>
+                                    <th className="pb-3">Dekorace</th>
+                                    <th className="pb-3 text-red-500">Úvazek</th>
+                                    <th className="pb-3 text-blue-400">Název kulisy</th>
+                                    <th className="pb-3">Stav</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-800/50">
+                                {TAH_IDS.map(id => {
+                                    const t = tahy[id] || { id, pod: 0, dek: 0, uva: 0, nosnost: 80 };
+                                    const totalHeight = t.pod + t.dek + t.uva;
+                                    const isSelected = selectedTahId === id;
+                                    const isLocked = t.funkce === 'LOCK';
+                                    const isLight = t.funkce === 'světla';
 
-                                        {/* Color Selection Group */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {/* Text Color */}
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Barva textu</label>
-                                                <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3">
+                                    const rowClass = `group transition-colors hover:bg-zinc-800/30 cursor-pointer ${isSelected ? 'bg-blue-500/10' : ''} ${isLocked ? 'text-red-500/50' : ''}`;
+                                    const cellClass = isLocked ? 'line-through decoration-red-500/50' : '';
+
+                                    return (
+                                        <tr key={id} onClick={() => setSelectedTahId(id)} className={rowClass}>
+                                            <td className={`py-2 pl-2 font-black ${isLocked ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                #{id}{isLocked && <span className="ml-1 text-[8px] uppercase font-black">LOCK</span>}
+                                            </td>
+                                            <td className={`py-2 ${cellClass}`}>
+                                                {isHoistConfigMode ? (
                                                     <input
-                                                        type="color"
-                                                        value={label.color}
-                                                        onChange={(e) => updateTextLabel(label.id, { color: e.target.value })}
-                                                        className="w-8 h-8 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
+                                                        type="number"
+                                                        value={t.nosnost ?? 80}
+                                                        onChange={(e) => updateTah(id, { nosnost: Number(e.target.value) })}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-16 bg-zinc-950 border border-amber-500/30 rounded px-1 text-amber-500 font-mono text-xs outline-none focus:border-amber-500"
                                                     />
-                                                    <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase">{label.color}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Background Color & Opacity */}
-                                            <div className="space-y-4">
-                                                <div className="flex justify-between items-center pl-1">
-                                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pozadí</label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!label.backgroundColor}
-                                                        onChange={(e) => updateTextLabel(label.id, {
-                                                            backgroundColor: e.target.checked ? '#ffffff' : undefined,
-                                                            backgroundOpacity: e.target.checked ? 0.4 : undefined
-                                                        })}
-                                                        className="w-4 h-4 accent-purple-500 rounded border-zinc-700 bg-zinc-800"
-                                                    />
-                                                </div>
-
-                                                {label.backgroundColor && (
-                                                    <div className="space-y-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="color"
-                                                                value={label.backgroundColor.substring(0, 7)}
-                                                                onChange={(e) => updateTextLabel(label.id, { backgroundColor: e.target.value })}
-                                                                className="w-10 h-10 rounded-lg border-2 border-zinc-800 cursor-pointer bg-transparent overflow-hidden p-0"
-                                                            />
-                                                            <div className="flex-1 space-y-1">
-                                                                <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
-                                                                    <span>Průhlednost</span>
-                                                                    <span>{Math.round((label.backgroundOpacity ?? 0.3) * 100)}%</span>
-                                                                </div>
-                                                                <input
-                                                                    type="range"
-                                                                    min="0"
-                                                                    max="1"
-                                                                    step="0.05"
-                                                                    value={label.backgroundOpacity ?? 0.3}
-                                                                    onChange={(e) => updateTextLabel(label.id, { backgroundOpacity: parseFloat(e.target.value) })}
-                                                                    className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                ) : (
+                                                    <span className={`font-mono font-bold ${isLocked ? 'text-red-500/50' : 'text-amber-500'}`}>{t.nosnost ?? 80} kg</span>
                                                 )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 pt-4">
-                                        <button
-                                            onClick={() => removeTextLabel(label.id)}
-                                            className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
-                                        >
-                                            Smazat
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setEditingTextId(null);
-                                                setSelectedTextId(null);
-                                            }}
-                                            className="bg-white text-black font-black py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px]"
-                                        >
-                                            Hotovo
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            );
-                        })()}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <div className="h-20 glass-panel border-t border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl flex items-center px-12 gap-16 text-sm no-print">
-                <div className="flex-1" />
-                <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-end leading-none">
-                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Měřítko scény</span>
-                        <span className="text-zinc-200 font-mono font-bold">1 cm = {stageConfig.scale.toFixed(3)} px</span>
+                                            </td>
+                                            <td className={`py-2 font-mono ${isLocked ? 'text-red-500/50' : 'text-zinc-100'} ${cellClass}`}>{totalHeight} cm</td>
+                                            <td className={`py-2 font-mono ${isLocked ? 'text-red-500/50' : 'text-zinc-400'} ${cellClass}`}>{t.isHanging ? `${t.dek} cm` : '-'}</td>
+                                            <td className={`py-2 font-mono ${isLocked ? 'text-red-500/30' : 'text-red-500/80'} font-bold ${cellClass}`}>{t.isHanging && t.uva > 0 ? `${t.uva} cm` : '-'}</td>
+                                            <td className="py-2">
+                                                <span className={`font-bold text-xs truncate max-w-[200px] block ${isLocked ? 'text-red-500/50 italic' : (isLight ? 'text-zinc-500' : (t.isHanging ? 'text-blue-400' : 'text-zinc-700 italic'))}`}>
+                                                    {isLocked ? 'UZAMČENO' : (isLight ? 'SVĚTELNÝ TAH' : (t.isHanging ? (t.name || '(Bez názvu)') : 'Prázdný'))}
+                                                </span>
+                                            </td>
+                                            <td className="py-2">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${isLocked ? 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]' :
+                                                    isLight ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]' :
+                                                        t.isHanging ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-zinc-800'
+                                                    }`} />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Print Container */}
             <div className="print-only">
                 {scenes.map((scene) => (
-                    <div key={scene.id} className="print-page py-10">
-                        <div className="w-full text-center mb-6">
-                            <h1 className="text-3xl font-black uppercase tracking-tighter">{productionName}</h1>
-                            <h2 className="text-xl font-bold text-zinc-600 uppercase tracking-widest">{scene.name}</h2>
-                        </div>
+                    <div key={scene.id} className="print-page">
                         <div className="w-full flex justify-center">
                             <StageCanvas
                                 tahy={scene.tahy}
@@ -1314,7 +1519,7 @@ const App: React.FC = () => {
                     </div>
                 ))}
             </div>
-        </div>
+        </div >
     );
 };
 

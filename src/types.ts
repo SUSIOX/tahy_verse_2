@@ -8,6 +8,8 @@ export interface TahState {
     isBottomLimit: boolean;
     color?: string; // Barva kulisy
     name?: string;  // Název/Popis
+    nosnost?: number; // Nosnost tahu (kg)
+    funkce?: 'LOCK' | 'světla' | 'kulisy'; // Funkce tahu
 }
 
 export interface StageConfig {
@@ -55,7 +57,7 @@ export interface Scene {
     textLabels?: TextLabel[];
 }
 
-export const TAH_IDS = [1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18];
+export const TAH_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export const DEFAULT_STAGE_CONFIG: StageConfig = {
     stageHeightCm: 900,
@@ -72,21 +74,21 @@ export type HoistRegistry = Record<number, { x: number }>;
 
 export const DEFAULT_HOIST_POSITIONS: HoistRegistry = {
     1: { x: 699.2 },
-    2: { x: 729.2 },
-    3: { x: 759.2 },
+    2: { x: 712 },
+    3: { x: 726 },
     4: { x: 789.2 },
-    5: { x: 819.2 },
-    6: { x: 849.2 },
-    7: { x: 879.2 },
-    8: { x: 909.2 },
-    9: { x: 939.2 },
-    10: { x: 969.2 },
+    5: { x: 761 },
+    6: { x: 775 },
+    7: { x: 790 },
+    8: { x: 803 },
+    9: { x: 817 },
+    10: { x: 830 },
     11: { x: 999.2 },
-    12: { x: 1029.2 },
-    13: { x: 1059.2 },
-    14: { x: 1089.2 },
-    15: { x: 1119.2 },
-    16: { x: 1149.2 },
-    17: { x: 1179.2 },
-    18: { x: 1209.2 }
+    12: { x: 862 },
+    13: { x: 874 },
+    14: { x: 888 },
+    15: { x: 924 },
+    16: { x: 937 }, // Opraveno (původně 1149.2 mimo obraz)
+    17: { x: 950 },
+    18: { x: 963 }
 };

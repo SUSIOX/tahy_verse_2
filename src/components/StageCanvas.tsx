@@ -45,12 +45,14 @@ const IMG_HEIGHT = 789;
 const DESIGN_VIEWPORT_X = 0;
 const DESIGN_VIEWPORT_Y = 0;
 const DESIGN_VIEWPORT_W = 1125;
-const DESIGN_VIEWPORT_H = 778;
+const DESIGN_VIEWPORT_H = 789; // Show full height in app too
+
 
 export const PRINT_VIEWPORT_X = 0;
-export const PRINT_VIEWPORT_Y = 5;
+export const PRINT_VIEWPORT_Y = 0;
 export const PRINT_VIEWPORT_W = 1125;
-export const PRINT_VIEWPORT_H = 778;
+export const PRINT_VIEWPORT_H = 789; // Show full height
+
 
 /**
  * TABULKA POZIC TAHŮ
@@ -201,7 +203,7 @@ const StageCanvas: React.FC<Props> = ({
         if (draggingId === null || isDrawingEnabled) return;
 
         const tah = tahy[draggingId];
-        if (!tah) return;
+        if (!tah || tah.funkce === 'LOCK') return;
 
         const zeroY = ZERO_Y;
         const scale = SCALE_FACTOR;
@@ -276,6 +278,10 @@ const StageCanvas: React.FC<Props> = ({
 
     const handlePositioningMouseMove = (currentPos: Point) => {
         if (dragPositionId !== null && onUpdateHoistPositions && hoistPositions) {
+            // Check if locked
+            const currentTah = tahy[dragPositionId];
+            if (currentTah?.funkce === 'LOCK') return;
+
             // Dragging X for specific hoist
             const newX = currentPos.x;
             onUpdateHoistPositions({
@@ -380,10 +386,7 @@ const StageCanvas: React.FC<Props> = ({
                 height: IMG_HEIGHT - cropTop - cropBottom,
             }}
         >
-            <div className="absolute inset-0 bg-white z-0" style={{
-                backgroundImage: 'radial-gradient(#ddd 1px, transparent 1px)',
-                backgroundSize: '20px 20px'
-            }} />
+
 
             <img
                 src={stageConfig.customBgImage || stageBgImage}
@@ -470,7 +473,7 @@ const StageCanvas: React.FC<Props> = ({
                     return (
                         <g
                             key={id}
-                            className={`group transition-opacity duration-300 ${isDrawingEnabled ? 'opacity-30' : 'opacity-100'}`}
+                            className={`group transition-opacity duration-300 ${isDrawingEnabled ? 'opacity-30' : (tah.funkce === 'světla' ? 'opacity-70' : 'opacity-100')}`}
                             onClick={() => !isDrawingEnabled && onSelectTah(id)}
                             onDoubleClick={(e) => {
                                 if (isDrawingEnabled) return;
@@ -486,7 +489,7 @@ const StageCanvas: React.FC<Props> = ({
                             <motion.line
                                 x1={x} x2={x} y1={HOIST_TOP_Y} y2={effectiveHookY}
                                 animate={{ x1: x, x2: x, y1: HOIST_TOP_Y, y2: effectiveHookY }}
-                                stroke={isSelected ? "#3b82f6" : "#222"}
+                                stroke={tah.funkce === 'LOCK' ? "#ef4444" : (isSelected ? "#3b82f6" : (tah.funkce === 'světla' ? "#666" : "#222"))}
                                 strokeWidth={isSelected ? 3 : 2}
                                 strokeOpacity={isSelected ? 1 : 0.7}
                             />
@@ -495,20 +498,21 @@ const StageCanvas: React.FC<Props> = ({
                             <motion.circle
                                 cx={x} cy={effectiveHookY}
                                 animate={{ cx: x, cy: effectiveHookY }}
-                                whileHover={{ r: isSelected ? 8 : 7.5 }}
+                                whileHover={{ r: (isSelected || tah.funkce === 'LOCK') ? 8 : 7.5 }}
                                 r={isSelected ? 5.5 : 4}
-                                fill={isSelected ? "#3b82f6" : "#111"}
+                                fill={tah.funkce === 'LOCK' ? "#ef4444" : (isSelected ? "#3b82f6" : (tah.funkce === 'světla' ? "#eab308" : "#111"))}
                                 fillOpacity={0.9}
                                 stroke={isSelected ? "#fff" : "none"}
                                 strokeWidth={1}
                                 onMouseDown={(e: React.MouseEvent) => {
-                                    if (isDrawingEnabled) return; // Allow bubbling for lines
+                                    if (isDrawingEnabled || tah.funkce === 'LOCK') return; // Allow bubbling for lines, block if LOCK
                                     e.stopPropagation();
                                     setDraggingId(id);
                                     onSelectTah(id);
 
                                     // AUTO-HANG: If dragging an empty hook, automatically add a 10cm decoration
-                                    if (!tah.isHanging) {
+                                    // Blocked if function is 'světla'
+                                    if (!tah.isHanging && tah.funkce !== 'světla') {
                                         onUpdateTah(id, {
                                             isHanging: true,
                                             dek: 10,
@@ -517,7 +521,7 @@ const StageCanvas: React.FC<Props> = ({
                                         });
                                     }
                                 }}
-                                className="cursor-ns-resize transition-all"
+                                className={`${tah.funkce === 'LOCK' ? 'cursor-not-allowed' : 'cursor-ns-resize'} transition-all`}
                             />
 
                             {/* Indikátor režimu úvazku (červené kolečko při dvojkliku) */}
@@ -705,12 +709,13 @@ const StageCanvas: React.FC<Props> = ({
                                     <circle
                                         cx={x}
                                         cy={HOIST_TOP_Y}
-                                        r={12}
-                                        fill="rgba(245, 158, 11, 0.4)"
-                                        stroke="#f59e0b"
-                                        strokeWidth={2}
-                                        cursor="ew-resize"
+                                        r={3}
+                                        fill={tah.funkce === 'LOCK' ? "rgba(239, 68, 68, 0.4)" : "rgba(245, 158, 11, 0.4)"}
+                                        stroke={tah.funkce === 'LOCK' ? "#ef4444" : "#f59e0b"}
+                                        strokeWidth={0.5}
+                                        cursor={tah.funkce === 'LOCK' ? "not-allowed" : "ew-resize"}
                                         onMouseDown={(e) => {
+                                            if (tah.funkce === 'LOCK') return;
                                             e.stopPropagation();
                                             setDragPositionId(id);
                                         }}
@@ -719,7 +724,7 @@ const StageCanvas: React.FC<Props> = ({
                                     {/* Vertical guide line for X alignment */}
                                     <line
                                         x1={x} y1={0} x2={x} y2={IMG_HEIGHT}
-                                        stroke="#f59e0b"
+                                        stroke={tah.funkce === 'LOCK' ? "#ef4444" : "#f59e0b"}
                                         strokeWidth={1}
                                         strokeDasharray="4 4"
                                         opacity={0.5}
@@ -732,13 +737,13 @@ const StageCanvas: React.FC<Props> = ({
                                     {id === 1 && (
                                         <g>
                                             <rect
-                                                x={x - 20}
-                                                y={HOIST_TOP_Y - 10}
-                                                width={40}
-                                                height={20}
+                                                x={x - 8}
+                                                y={HOIST_TOP_Y - 3}
+                                                width={16}
+                                                height={6}
                                                 fill="rgba(59, 130, 246, 0.3)"
                                                 stroke="#3b82f6"
-                                                strokeWidth={2}
+                                                strokeWidth={0.5}
                                                 cursor="ns-resize"
                                                 onMouseDown={(e) => {
                                                     e.stopPropagation();
@@ -755,16 +760,48 @@ const StageCanvas: React.FC<Props> = ({
                                                 opacity={0.5}
                                                 pointerEvents="none"
                                             />
-                                            <text x={x + 25} y={HOIST_TOP_Y + 4} fontSize="10" fill="#3b82f6" fontWeight="bold">Y: {HOIST_TOP_Y.toFixed(1)}px</text>
+                                            <text x={x + 25} y={HOIST_TOP_Y + 4} fontSize="3.5" fill="#3b82f6">Y: {HOIST_TOP_Y.toFixed(1)}px</text>
                                         </g>
                                     )}
 
                                     {/* X Coord Label */}
-                                    <text x={x} y={HOIST_TOP_Y - 20} textAnchor="middle" fontSize="9" fill="#f59e0b" fontWeight="bold" pointerEvents="none">
+                                    <text x={x} y={HOIST_TOP_Y - 20} textAnchor="middle" fontSize="3.5" fill={tah.funkce === 'LOCK' ? "#ef4444" : "#f59e0b"} pointerEvents="none">
                                         X: {x.toFixed(1)}
                                     </text>
                                 </g>
                             )}
+
+                            {/* Hoist spacing indicators (cm) */}
+                            {isPositioningMode && (() => {
+                                const sortedHoists = TAH_IDS.map(tid => ({
+                                    id: tid,
+                                    x: hoistPositions?.[tid]?.x ?? DEFAULT_HOIST_POSITIONS_FALLBACK[tid]?.x ?? 0
+                                })).sort((a, b) => a.x - b.x);
+
+                                const currentIndex = sortedHoists.findIndex(h => h.id === id);
+                                if (currentIndex === -1 || currentIndex === sortedHoists.length - 1) return null;
+
+                                const nextH = sortedHoists[currentIndex + 1];
+                                const distPx = nextH.x - x;
+                                const distCm = distPx / SCALE_FACTOR;
+                                const midX = x + distPx / 2;
+
+                                return (
+                                    <g key={`dist-${id}`}>
+                                        <line
+                                            x1={x + 5} y1={HOIST_TOP_Y + 40}
+                                            x2={nextH.x - 5} y2={HOIST_TOP_Y + 40}
+                                            stroke="#3b82f6" strokeWidth={0.2} strokeDasharray="1 1" opacity={0.5}
+                                        />
+                                        <text
+                                            x={midX} y={HOIST_TOP_Y + 42}
+                                            textAnchor="middle" fontSize="3.5" fill="#3b82f6" pointerEvents="none"
+                                        >
+                                            {Math.round(distCm)} cm
+                                        </text>
+                                    </g>
+                                );
+                            })()}
 
 
                             {/* Horní úvrať */}
@@ -911,22 +948,7 @@ const StageCanvas: React.FC<Props> = ({
                     })}
                 </g>
 
-                {/* DEBUG: Coordinate Grid */}
-                <g pointerEvents="none" opacity="0.5">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                        <g key={`grid-x-${i}`}>
-                            <line x1={i * 100} y1="0" x2={i * 100} y2={IMG_HEIGHT} stroke="#ddd" strokeWidth="1" />
-                            <text x={i * 100 + 2} y="10" fontSize="8" fill="#aaa">{i * 100}</text>
-                        </g>
-                    ))}
-                    {Array.from({ length: 15 }).map((_, i) => (
-                        <g key={`grid-y-${i}`}>
-                            <line x1="0" y1={i * 100} x2={IMG_WIDTH} y2={i * 100} stroke="#ddd" strokeWidth="1" />
-                            <text x="2" y={i * 100 - 2} fontSize="8" fill="#aaa">{i * 100}</text>
-                        </g>
-                    ))}
 
-                </g>
 
                 {/* Text Labels Layer */}
                 <g id="text-labels">
