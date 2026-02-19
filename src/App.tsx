@@ -119,7 +119,19 @@ const App: React.FC = () => {
     const [hoistPositions, setHoistPositions] = useState<HoistRegistry>(() => {
         try {
             const saved = localStorage.getItem('tahy-hoist-positions');
-            if (saved) return JSON.parse(saved);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Nastavení automatické opravy předchozích chybných souřadnic z cache
+                let changed = false;
+                if (parsed[4] && parsed[4].x === 789.2) { parsed[4].x = 744; changed = true; }
+                if (parsed[11] && parsed[11].x === 999.2) { parsed[11].x = 846; changed = true; }
+                if (parsed[16] && parsed[16].x === 1149.2) { parsed[16].x = 937; changed = true; }
+
+                if (changed) {
+                    localStorage.setItem('tahy-hoist-positions', JSON.stringify(parsed));
+                }
+                return parsed;
+            }
             return (defaultSet.hoistPositions as HoistRegistry) || DEFAULT_HOIST_POSITIONS;
         } catch (e) {
             console.error('Failed to load hoist positions', e);
