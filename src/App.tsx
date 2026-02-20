@@ -11,7 +11,8 @@ import {
     LineStyle,
     TextLabel,
     DEFAULT_HOIST_POSITIONS,
-    HoistRegistry
+    HoistRegistry,
+    Space
 } from './types';
 import StageCanvas, {
     PRINT_VIEWPORT_X,
@@ -40,7 +41,8 @@ import {
     Printer,
     TriangleAlert,
     ClipboardList,
-    FileText
+    FileText,
+    Trash2
 } from 'lucide-react';
 import defaultSet from '../public/assets/default_set.json';
 
@@ -150,6 +152,112 @@ const App: React.FC = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [focusedPixelValue, setFocusedPixelValue] = useState<number | null>(null);
 
+    // --- SPACE MANAGEMENT ---
+    const [spaces, setSpaces] = useState<Space[]>(() => {
+        const saved = localStorage.getItem('tahy-spaces');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Failed to load spaces from localStorage:', e);
+            }
+        }
+
+        // Migration: Create a default space from current settings if we don't have spaces yet
+        return [{
+            id: 'default-space',
+            name: 'Výchozí Prostor',
+            productionName: productionName,
+            activeSceneId: activeSceneId,
+            scenes: scenes,
+            stageConfig: stageConfig,
+            hoistPositions: hoistPositions
+        }];
+    });
+
+    const [activeSpaceId, setActiveSpaceId] = useState<string>(() => {
+        return localStorage.getItem('tahy-active-space-id') || 'default-space';
+    });
+
+    // Save spaces & active space to localStorage
+    useEffect(() => {
+        localStorage.setItem('tahy-spaces', JSON.stringify(spaces));
+    }, [spaces]);
+
+    useEffect(() => {
+        localStorage.setItem('tahy-active-space-id', activeSpaceId);
+    }, [activeSpaceId]);
+
+    // Save individual config settings back to the active Space
+    useEffect(() => {
+        setSpaces(prev => prev.map(space => {
+            if (space.id === activeSpaceId) {
+                return {
+                    ...space,
+                    productionName,
+                    activeSceneId,
+                    scenes,
+                    stageConfig,
+                    hoistPositions
+                };
+            }
+            return space;
+        }));
+    }, [productionName, activeSceneId, scenes, stageConfig, hoistPositions, activeSpaceId]);
+
+    // Switch Space function
+    const handleSwitchSpace = (spaceId: string) => {
+        const newSpace = spaces.find(s => s.id === spaceId);
+        if (newSpace) {
+            setActiveSpaceId(spaceId);
+            setProductionName(newSpace.productionName);
+            setActiveSceneId(newSpace.activeSceneId);
+            setScenes(newSpace.scenes);
+            setStageConfig(newSpace.stageConfig);
+            setHoistPositions(newSpace.hoistPositions);
+            addLog(`Přepnuto do prostoru: ${newSpace.name}`);
+        }
+    };
+
+    const handleCreateSpace = (name: string) => {
+        const newSpace: Space = {
+            id: `space-${Date.now()}`,
+            name,
+            productionName: "Nová Inscenace",
+            activeSceneId: "1",
+            scenes: [{ id: "1", name: "Scéna 1", tahy: getInitialTahy() }],
+            stageConfig: DEFAULT_STAGE_CONFIG,
+            hoistPositions: DEFAULT_HOIST_POSITIONS
+        };
+        setSpaces(prev => [...prev, newSpace]);
+        handleSwitchSpace(newSpace.id);
+        addLog(`Vytvořen nový prostor: ${name}`);
+    };
+
+    const handleDeleteSpace = (spaceId: string) => {
+        if (spaces.length <= 1) {
+            alert('Nelze smazat poslední prostor.');
+            return;
+        }
+        if (confirm('Opravdu chcete tento prostor a všechny jeho inscenace odstranit?')) {
+            setSpaces(prev => prev.filter(s => s.id !== spaceId));
+            if (activeSpaceId === spaceId) {
+                const newActiveSpace = spaces.find(s => s.id !== spaceId);
+                if (newActiveSpace) {
+                    handleSwitchSpace(newActiveSpace.id);
+                }
+            }
+            addLog('Prostor odstraněn.');
+        }
+    };
+
+    const handleRenameSpace = (spaceId: string, newName: string) => {
+        if (!newName.trim()) return;
+        setSpaces(prev => prev.map(s => s.id === spaceId ? { ...s, name: newName } : s));
+    };
+
+    // ------------------------
+
     // Virtuální Scéna 0 pro režim pozicování (vše nulové)
     const SCENE_ZERO: Scene = React.useMemo(() => {
         // Technické parametry bereme z první scény, abychom je v S0 viděli a mohli měnit
@@ -204,29 +312,46 @@ const App: React.FC = () => {
             setVectorLines(activeScene.vectorLines || []);
             setTextLabels(activeScene.textLabels || []);
         }
-    }, [activeSceneId, displayScenes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeSceneId, scenes]);
 
     // Sync current state to active scene in scenes array
     const syncCurrentStateToScenes = useCallback((newTahy?: Record<number, TahState>, newVectors?: VectorLine[], newLabels?: TextLabel[]) => {
         if (activeSceneId === "0") {
             // Propagace technických parametrů do všech scén
             if (newTahy) {
-                setScenes(prevScenes => prevScenes.map(s => ({
-                    ...s,
-                    tahy: Object.keys(s.tahy).reduce((acc, idStr) => {
-                        const id = Number(idStr);
-                        const isLight = newTahy[id].funkce === 'světla';
-                        acc[id] = {
-                            ...s.tahy[id],
-                            nosnost: newTahy[id].nosnost,
-                            funkce: newTahy[id].funkce,
-                            // Pozici od země u světel považujeme za technický parametr (rigging)
-                            pod: isLight ? newTahy[id].pod : s.tahy[id].pod,
-                            isHanging: isLight ? true : s.tahy[id].isHanging
+                setScenes((prevScenes) => {
+                    if (prevScenes.length === 0) return prevScenes;
+                    return prevScenes.map((s, index) => {
+                        // Pro první scénu (index 0) uložíme KOMPLETNÍ novou definici tahů, aby se
+                        // zachovaly defaulty a funkce/nosnost.
+                        if (index === 0) {
+                            return {
+                                ...s,
+                                tahy: newTahy
+                            };
+                        }
+
+                        // Pro ostatní scény jen zkopírujeme technické vlastnosti (funkce, nosnost),
+                        // ale necháme jejich lokální pozice (dek, uva, pod).
+                        return {
+                            ...s,
+                            tahy: Object.keys(s.tahy).reduce((acc, idStr) => {
+                                const id = Number(idStr);
+                                const isLight = newTahy[id].funkce === 'světla';
+                                acc[id] = {
+                                    ...s.tahy[id],
+                                    nosnost: newTahy[id].nosnost,
+                                    funkce: newTahy[id].funkce,
+                                    // Pozici od země u světel považujeme za technický parametr (rigging)
+                                    pod: isLight ? newTahy[id].pod : s.tahy[id].pod,
+                                    isHanging: isLight ? true : s.tahy[id].isHanging
+                                };
+                                return acc;
+                            }, {} as Record<number, TahState>)
                         };
-                        return acc;
-                    }, {} as Record<number, TahState>)
-                })));
+                    });
+                });
             }
             return;
         }
@@ -566,8 +691,17 @@ const App: React.FC = () => {
                                         <div className="w-5 h-5 border-2 border-white rounded-sm" />
                                     </div>
                                     <div>
-                                        <h1 className="text-xl font-black tracking-tighter uppercase leading-none">Tahy Jirka</h1>
-                                        <span className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">Verze 2.0</span>
+                                        <h1 className="text-xl font-black tracking-tighter uppercase leading-none">
+                                            Tahy Jirka
+                                        </h1>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">
+                                                Verze 2.0
+                                            </span>
+                                            <span className="text-[10px] text-blue-400/80 font-black tracking-widest uppercase bg-blue-500/10 px-2 py-0.5 rounded-sm">
+                                                {spaces.find(s => s.id === activeSpaceId)?.name || 'Neznámý Prostor'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <button
@@ -964,7 +1098,7 @@ const App: React.FC = () => {
                                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                                 animate={{ scale: 1, opacity: 1, y: 0 }}
                                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                                className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] p-12 space-y-10"
+                                className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] p-12 space-y-10"
                                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             >
                                 <div className="flex items-center justify-between">
@@ -986,6 +1120,65 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-8">
+                                    {/* Space Management Section */}
+                                    <div className="col-span-2 bg-blue-900/10 border border-blue-500/20 rounded-3xl p-6 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest">
+                                                Správa Prostorů
+                                            </h3>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const name = prompt('Zadejte název nového prostoru:', 'Nový Prostor');
+                                                        if (name) handleCreateSpace(name);
+                                                    }}
+                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg active:scale-95"
+                                                    title="Vytvoří nový prostor s výchozím nastavením tahů a scény"
+                                                >
+                                                    <Plus className="w-4 h-4 inline-block mr-1" />
+                                                    Přidat Prostor
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">
+                                                    Aktivní Prostor
+                                                </label>
+                                                <select
+                                                    value={activeSpaceId}
+                                                    onChange={(e) => handleSwitchSpace(e.target.value)}
+                                                    className="w-full bg-zinc-950 border-2 border-zinc-800/50 rounded-2xl px-4 py-4 text-zinc-100 font-bold text-sm focus:border-blue-500 outline-none transition-all shadow-inner cursor-pointer"
+                                                >
+                                                    {spaces.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">
+                                                    Název Prostoru
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={spaces.find(s => s.id === activeSpaceId)?.name || ''}
+                                                        onChange={(e) => handleRenameSpace(activeSpaceId, e.target.value)}
+                                                        className="flex-1 bg-zinc-950 border-2 border-zinc-800/50 rounded-2xl px-4 py-4 text-zinc-100 font-bold text-sm focus:border-blue-500 outline-none transition-all shadow-inner"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleDeleteSpace(activeSpaceId)}
+                                                        disabled={spaces.length <= 1}
+                                                        className="px-4 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-2xl transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="Smazat tento prostor"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Vzdálenost Podlaha - tah v nejvyšší poloze (cm)</label>
                                         <input

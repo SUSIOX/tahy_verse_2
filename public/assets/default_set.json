@@ -356,10 +356,10 @@
         },
         "8": {
           "id": 8,
-          "dek": 137,
-          "uva": 140,
-          "pod": 202,
-          "isHanging": true,
+          "dek": 0,
+          "uva": 0,
+          "pod": 900,
+          "isHanging": false,
           "isTopLimit": false,
           "isBottomLimit": false
         },

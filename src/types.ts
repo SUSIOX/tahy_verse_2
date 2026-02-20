@@ -59,6 +59,16 @@ export interface Scene {
 
 export const TAH_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
+export interface Space {
+    id: string;
+    name: string;
+    productionName: string;
+    activeSceneId: string;
+    scenes: Scene[];
+    stageConfig: StageConfig;
+    hoistPositions: HoistRegistry;
+}
+
 export const DEFAULT_STAGE_CONFIG: StageConfig = {
     stageHeightCm: 900,
     topLimitY: 120.9,
